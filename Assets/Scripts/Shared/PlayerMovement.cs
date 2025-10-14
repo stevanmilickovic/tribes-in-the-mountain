@@ -1,104 +1,104 @@
+using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using FishNet.Object;
-using FishNet.Object.Synchronizing;
 
-[RequireComponent(typeof(Rigidbody))]
 public class PlayerMovement : NetworkBehaviour
 {
-    [Header("Speeds")]
-    [SerializeField] private float moveSpeed = 5.5f;
-    [SerializeField] private float rotationSpeedDegPerSec = 540f; // turn speed
+    [Header("Movement")]
+    public float moveSpeed;
+    public float groundDrag;
 
-    private Rigidbody _rb;
+    [Header("Jumping")]
+    public float jumpForce;
+    public float jumpCooldown;
+    public float airMultiplier;
+    bool readyToJump;
 
-    private struct InputSnapshot
-    {
-        public float moveX;
-        public float moveY;
-        public bool aiming;
-        public bool hasYaw;
-        public float yaw;
-    }
+    [Header("Ground Check")]
+    public float playerHeight;
+    public LayerMask whatIsGround;
+    bool grounded;
 
-    private InputSnapshot _lastInput;
-    private bool _hasInput;
+    public PlayerInputs input; 
+
+    Vector3 moveDirection;
+    Rigidbody rb;
 
     public override void OnStartServer()
     {
-        base.OnStartServer();
-        EnsureRigidbody();
-        if (_rb != null)
-        {
-            _rb.isKinematic = false;
-            _rb.interpolation = RigidbodyInterpolation.Interpolate;
-        }
+        rb = GetComponent<Rigidbody>();
+        if (rb == null) rb = gameObject.AddComponent<Rigidbody>();
+        rb.freezeRotation = true;
+        rb.isKinematic = false;
+        enabled = true;
+        readyToJump = true;
     }
 
     public override void OnStartClient()
     {
-        base.OnStartClient();
-        EnsureRigidbody();
-
-        if (!IsServer && _rb != null)
-            _rb.isKinematic = true;
+        if (!IsServerInitialized)
+        {
+            rb = GetComponent<Rigidbody>();
+            if (rb != null) rb.isKinematic = true;
+            enabled = false;
+        }
     }
 
-    private void EnsureRigidbody()
+    private void Update()
     {
-        if (_rb == null) _rb = GetComponent<Rigidbody>();
+        grounded = Physics.Raycast(transform.position, Vector3.down, playerHeight * 0.5f + 0.3f, whatIsGround);
+
+        SpeedControl();
+
+        if (rb != null)
+            rb.drag = grounded ? groundDrag : 0f;
+
+        if (input != null && input.jump && readyToJump && grounded)
+        {
+            readyToJump = false;
+            Jump();
+            Invoke(nameof(ResetJump), jumpCooldown);
+        }
     }
 
     private void FixedUpdate()
     {
-        if (!IsServer) return;
-
-        if (!_hasInput)
-            return;
-
-        Vector3 wishMove = Vector3.zero;
-
-        if (Mathf.Abs(_lastInput.moveX) > 0.001f || Mathf.Abs(_lastInput.moveY) > 0.001f)
-        {
-            wishMove = new Vector3(_lastInput.moveX, 0f, _lastInput.moveY);
-            wishMove = Vector3.ClampMagnitude(wishMove, 1f);
-        }
-
-        if (_lastInput.hasYaw && (_lastInput.aiming || wishMove.sqrMagnitude > 0f))
-        {
-            float targetYaw = _lastInput.yaw;
-            Quaternion targetRot = Quaternion.Euler(0f, targetYaw, 0f);
-            transform.rotation = Quaternion.RotateTowards(
-                transform.rotation,
-                targetRot,
-                rotationSpeedDegPerSec * Time.fixedDeltaTime
-            );
-        }
-
-        if (wishMove.sqrMagnitude > 0f)
-        {
-            Vector3 moveWorld =
-                transform.forward * wishMove.z +
-                transform.right * wishMove.x;
-
-            Vector3 newPos = _rb.position + moveWorld * (moveSpeed * Time.fixedDeltaTime);
-            _rb.MovePosition(newPos);
-        }
+        MovePlayer();
     }
 
-    [ServerRpc(RequireOwnership = true)]
-    private void SubmitInputServerRpc(float moveX, float moveY, bool aiming, bool hasYaw, float yaw)
+    private void MovePlayer()
     {
-        _lastInput.moveX = moveX;
-        _lastInput.moveY = moveY;
-        _lastInput.aiming = aiming;
-        _lastInput.hasYaw = hasYaw;
-        _lastInput.yaw = yaw;
-        _hasInput = true;
+        if (input == null || rb == null) return;
+
+        float yaw = input.lookYawDeg;
+        Quaternion basis = Quaternion.Euler(0f, yaw, 0f);
+        Vector3 fwd = basis * Vector3.forward;
+        Vector3 right = basis * Vector3.right;
+
+        Vector2 m = input.move;
+        moveDirection = fwd * m.y + right * m.x;
+
+        if (grounded)
+            rb.AddForce(moveDirection.normalized * moveSpeed * 10f, ForceMode.Force);
+        else
+            rb.AddForce(moveDirection.normalized * moveSpeed * 10f * airMultiplier, ForceMode.Force);
     }
 
-    public void SendInputToServer(float moveX, float moveY, bool aiming, bool hasYaw, float yaw)
+    private void SpeedControl()
     {
-        if (!IsOwner) return;
-        SubmitInputServerRpc(moveX, moveY, aiming, hasYaw, yaw);
+        Vector3 flatVel = new Vector3(rb.velocity.x, 0f, rb.velocity.z);
+        if (flatVel.magnitude > moveSpeed)
+        {
+            Vector3 limitedVel = flatVel.normalized * moveSpeed;
+            rb.velocity = new Vector3(limitedVel.x, rb.velocity.y, limitedVel.z);
+        }
     }
+
+    private void Jump()
+    {
+        rb.velocity = new Vector3(rb.velocity.x, 0f, rb.velocity.z);
+        rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
+    }
+    private void ResetJump() => readyToJump = true;
 }
