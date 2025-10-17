@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 3133329712253413748}
   - component: {fileID: 3839818301792152218}
   - component: {fileID: 5604002607820323691}
-  m_Layer: 0
+  m_Layer: 11
   m_Name: PlayerObj
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -125,7 +125,9 @@ GameObject:
   - component: {fileID: 1294418109039712168}
   - component: {fileID: 1790398302540687137}
   - component: {fileID: -884552524095050793}
-  m_Layer: 0
+  - component: {fileID: 2872090865942907698}
+  - component: {fileID: 5924861520208318945}
+  m_Layer: 11
   m_Name: Player
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -173,7 +175,7 @@ Rigidbody:
   m_ImplicitTensor: 1
   m_UseGravity: 1
   m_IsKinematic: 1
-  m_Interpolate: 1
+  m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 1
 --- !u!114 &7705465345961773221
@@ -201,6 +203,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 1024
   input: {fileID: 7161943386019570500}
+  health: {fileID: 0}
 --- !u!114 &7161943386019570500
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -221,6 +224,8 @@ MonoBehaviour:
   jump: 0
   lookYawDeg: 0
   lookPitchDeg: 0
+  firePressed: 0
+  isAiming: 0
 --- !u!114 &8189567804932176246
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -236,9 +241,11 @@ MonoBehaviour:
   _componentIndexCache: 2
   _addedNetworkObject: {fileID: 1294418109039712168}
   _networkObjectCache: {fileID: 1294418109039712168}
-  playerObj: {fileID: 271099231719261030}
+  playerObj: {fileID: 721128818354707098}
   input: {fileID: 7161943386019570500}
   rotationSpeed: 7
+  aimingRotationSpeed: 20
+  health: {fileID: 0}
 --- !u!114 &431268789512667861
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -281,6 +288,9 @@ MonoBehaviour:
   - {fileID: 8189567804932176246}
   - {fileID: 431268789512667861}
   - {fileID: 1790398302540687137}
+  - {fileID: -884552524095050793}
+  - {fileID: 2872090865942907698}
+  - {fileID: 5924861520208318945}
   InitializedParentNetworkBehaviour: {fileID: 0}
   InitializedNestedNetworkObjects: []
   RuntimeParentNetworkBehaviour: {fileID: 0}
@@ -340,7 +350,7 @@ MonoBehaviour:
   _extrapolation: 2
   _enableTeleport: 0
   _teleportThreshold: 1
-  _clientAuthoritative: 1
+  _clientAuthoritative: 0
   _sendToOwner: 1
   _interval: 1
   _synchronizePosition: 1
@@ -372,9 +382,54 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d94b1f68acbbe694da8dd3d403ae9560, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _componentIndexCache: 255
+  _componentIndexCache: 5
   _addedNetworkObject: {fileID: 1294418109039712168}
-  _networkObjectCache: {fileID: 0}
+  _networkObjectCache: {fileID: 1294418109039712168}
+--- !u!114 &2872090865942907698
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1715684365727957010}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b6d66e3e03d2dfe4481738fd8a6e6c3a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _componentIndexCache: 6
+  _addedNetworkObject: {fileID: 1294418109039712168}
+  _networkObjectCache: {fileID: 1294418109039712168}
+  maxHealth: 100
+  respawnDelay: 5
+  visualsRoot: {fileID: 0}
+  spawnProviderBehaviour: {fileID: 0}
+--- !u!114 &5924861520208318945
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1715684365727957010}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dc7383d67ab2f134b82a0a17756151c8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _componentIndexCache: 7
+  _addedNetworkObject: {fileID: 1294418109039712168}
+  _networkObjectCache: {fileID: 1294418109039712168}
+  orientation: {fileID: 7682557729649604570}
+  input: {fileID: 7161943386019570500}
+  health: {fileID: 2872090865942907698}
+  team: {fileID: -884552524095050793}
+  damage: 100
+  maxRange: 150
+  reloadSeconds: 6
+  playerHitboxMask:
+    serializedVersion: 2
+    m_Bits: 2048
+  allowFriendlyFire: 0
 --- !u!1 &3735577750373151970
 GameObject:
   m_ObjectHideFlags: 0
@@ -384,7 +439,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 7682557729649604570}
-  m_Layer: 0
+  m_Layer: 11
   m_Name: Orientation
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -418,7 +473,7 @@ GameObject:
   - component: {fileID: 1042225056441761932}
   - component: {fileID: 6636205347080728515}
   - component: {fileID: 6545751342061418652}
-  m_Layer: 0
+  m_Layer: 11
   m_Name: Cube
   m_TagString: Untagged
   m_Icon: {fileID: 0}

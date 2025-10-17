@@ -20,7 +20,8 @@ public class PlayerMovement : NetworkBehaviour
     public LayerMask whatIsGround;
     bool grounded;
 
-    public PlayerInputs input; 
+    public PlayerInputs input;
+    public PlayerHealth health;
 
     Vector3 moveDirection;
     Rigidbody rb;
@@ -37,6 +38,7 @@ public class PlayerMovement : NetworkBehaviour
 
     public override void OnStartClient()
     {
+        Debug.Log($"[Move] ENABLE on {name}");
         if (!IsServerInitialized)
         {
             rb = GetComponent<Rigidbody>();
@@ -47,6 +49,8 @@ public class PlayerMovement : NetworkBehaviour
 
     private void Update()
     {
+        if (health != null && !health.IsAlive) return;
+
         grounded = Physics.Raycast(transform.position, Vector3.down, playerHeight * 0.5f + 0.3f, whatIsGround);
 
         SpeedControl();
@@ -64,6 +68,7 @@ public class PlayerMovement : NetworkBehaviour
 
     private void FixedUpdate()
     {
+        if (health != null && !health.IsAlive) return;
         MovePlayer();
     }
 

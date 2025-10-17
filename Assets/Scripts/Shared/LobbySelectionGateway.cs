@@ -3,6 +3,7 @@ using UnityEngine;
 using FishNet.Object;
 using FishNet.Transporting;
 using FishNet.Connection;
+using System;
 
 public class LobbySelectionGateway : NetworkBehaviour
 {
@@ -62,5 +63,12 @@ public class LobbySelectionGateway : NetworkBehaviour
         if (pt != null) pt.ServerSetTeam(team);
 
         _pending.Remove(conn);
+    }
+
+    internal Transform GetSpawnForTeam(Team team)
+    {
+        if (team == Team.None) return null;
+        if (team == Team.TeamA) return teamASpawn;
+        else return teamBSpawn;
     }
 }
