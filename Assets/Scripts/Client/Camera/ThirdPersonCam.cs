@@ -14,12 +14,6 @@ public class ThirdPersonCam : MonoBehaviour
     public float minPitch = -89f;
     public float maxPitch = 89f;
 
-    void Start()
-    {
-        //Cursor.lockState = CursorLockMode.Locked;
-        //Cursor.visible = false;
-    }
-
     void Update()
     {
         if (player == null || orientation == null)

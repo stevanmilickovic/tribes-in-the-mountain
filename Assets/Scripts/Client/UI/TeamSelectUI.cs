@@ -8,7 +8,7 @@ public class TeamSelectUI : MonoBehaviour
     [SerializeField] private Button teamBButton;
     [SerializeField] private GameObject rootPanel;
 
-    private LobbySelectionGateway _gateway;
+    private LobbySelectionGateway gateway;
 
     private void Awake()
     {
@@ -19,19 +19,21 @@ public class TeamSelectUI : MonoBehaviour
 
     private void Update()
     {
-        if (_gateway == null)
-            _gateway = FindObjectOfType<LobbySelectionGateway>();
+        if (gateway == null)
+            gateway = FindObjectOfType<LobbySelectionGateway>();
 
-        bool ready = InstanceFinder.IsClientStarted && _gateway != null && _gateway.IsClientInitialized;
+        bool ready = InstanceFinder.IsClientStarted && gateway != null && gateway.IsClientInitialized;
         if (teamAButton.interactable != ready) SetInteractable(ready);
     }
 
     private void Submit(Team t)
     {
         if (!InstanceFinder.IsClientStarted) return;
-        if (_gateway == null || !_gateway.IsClientInitialized) return;
+        if (gateway == null || !gateway.IsClientInitialized) return;
 
-        _gateway.SubmitTeamChoice(t);
+        gateway.SubmitTeamChoice(t);
+        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
         if (rootPanel != null) rootPanel.SetActive(false);
     }
 

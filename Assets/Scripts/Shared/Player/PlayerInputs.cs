@@ -23,15 +23,21 @@ public class PlayerInputs : NetworkBehaviour
 
     void Update()
     {
-        if (!IsOwner) return; 
-        Debug.Log($"[Inputs] ticking {name}");
+        if (!IsOwner) return;
 
-        float h = Input.GetAxisRaw("Horizontal");
-        float v = Input.GetAxisRaw("Vertical");
-        Vector2 m = new Vector2(h, v);
-        if (m.sqrMagnitude > 1f) m.Normalize();
+        CollectInputs();
 
-        bool j = Input.GetKey(KeyCode.Space);
+        SendInputServerRpc(move, jump, lookYawDeg, lookPitchDeg, firePressed, isAiming);
+    }
+
+    private void CollectInputs()
+    {
+        float horizontal = Input.GetAxisRaw("Horizontal");
+        float vertical = Input.GetAxisRaw("Vertical");
+        Vector2 movementVector = new Vector2(horizontal, vertical);
+        if (movementVector.sqrMagnitude > 1f) movementVector.Normalize();
+
+        bool jumpKey = Input.GetKey(KeyCode.Space);
 
         bool fire = Input.GetMouseButton(0);
         bool aim = Input.GetMouseButton(1);
@@ -39,13 +45,15 @@ public class PlayerInputs : NetworkBehaviour
         float yaw = cameraRig ? cameraRig.lookYawDeg : 0f;
         float pit = cameraRig ? cameraRig.lookPitchDeg : 0f;
 
-        move = m; jump = j; lookYawDeg = yaw; lookPitchDeg = pit;
-        firePressed = fire; isAiming = aim;
-
-        SendInputServerRpc(m, j, yaw, pit, fire, aim);
+        move = movementVector; 
+        jump = jumpKey; 
+        lookYawDeg = yaw; 
+        lookPitchDeg = pit;
+        firePressed = fire; 
+        isAiming = aim;
     }
 
-    [ServerRpc(RequireOwnership = false, RunLocally = false)]
+    [ServerRpc(RequireOwnership = true, RunLocally = false)]
     private void SendInputServerRpc(Vector2 m, bool j, float yaw, float pit, bool fire, bool aim)
     {
         move = m;

@@ -5,7 +5,7 @@ using FishNet.Transporting;
 using FishNet.Connection;
 using System;
 
-public class LobbySelectionGateway : NetworkBehaviour
+public class LobbySelectionGateway : NetworkSingleton<LobbySelectionGateway>
 {
     [SerializeField] private GameObject playerPrefab;
 

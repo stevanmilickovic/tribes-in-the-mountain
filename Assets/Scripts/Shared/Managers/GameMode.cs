@@ -8,8 +8,8 @@ public class GameMode : NetworkBehaviour
     private readonly SyncVar<int> teamACount = new();
     private readonly SyncVar<int> teamBCount = new();
 
-    private float _accum;
-    private TeamManager _teams;
+    private float accumulated;
+    private TeamManager teams;
 
     public int RemainingSeconds => remainingSeconds.Value;
     public int TeamACount => teamACount.Value;
@@ -18,8 +18,8 @@ public class GameMode : NetworkBehaviour
     public override void OnStartServer()
     {
         base.OnStartServer();
-        _teams = GetComponent<TeamManager>();
-        if (_teams == null) _teams = gameObject.AddComponent<TeamManager>();
+        teams = GetComponent<TeamManager>();
+        if (teams == null) teams = gameObject.AddComponent<TeamManager>();
         remainingSeconds.Value = 600;
         teamACount.Value = 0;
         teamBCount.Value = 0;
@@ -28,14 +28,14 @@ public class GameMode : NetworkBehaviour
     private void Update()
     {
         if (!IsServerInitialized) return;
-        _accum += Time.deltaTime;
-        if (_accum >= 1f)
+        accumulated += Time.deltaTime;
+        if (accumulated >= 1f)
         {
-            _accum -= 1f;
+            accumulated -= 1f;
             remainingSeconds.Value -= 1;
             if (remainingSeconds.Value <= 0) remainingSeconds.Value = 600;
         }
-        var counts = _teams != null ? _teams.GetCounts() : (0, 0);
+        var counts = teams != null ? teams.GetCounts() : (0, 0);
         if (teamACount.Value != counts.Item1) teamACount.Value = counts.Item1;
         if (teamBCount.Value != counts.Item2) teamBCount.Value = counts.Item2;
     }

@@ -1,5 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using FishNet.Object;
 
@@ -28,35 +26,31 @@ public class PlayerMovement : NetworkBehaviour
 
     public override void OnStartServer()
     {
-        rb = GetComponent<Rigidbody>();
-        if (rb == null) rb = gameObject.AddComponent<Rigidbody>();
-        rb.freezeRotation = true;
-        rb.isKinematic = false;
+        rb = ServerNetworkPrefabsUtil.setGameObjectRigidbody(gameObject);
         enabled = true;
         readyToJump = true;
     }
 
     public override void OnStartClient()
     {
-        Debug.Log($"[Move] ENABLE on {name}");
         if (!IsServerInitialized)
         {
-            rb = GetComponent<Rigidbody>();
-            if (rb != null) rb.isKinematic = true;
+            rb = ClientNetworkPrefabsUtil.setGameObjectRigidbody(gameObject);
             enabled = false;
         }
     }
 
-    private void Update()
+    private void FixedUpdate()
     {
         if (health != null && !health.IsAlive) return;
 
         grounded = Physics.Raycast(transform.position, Vector3.down, playerHeight * 0.5f + 0.3f, whatIsGround);
 
+        MovePlayer();
+
         SpeedControl();
 
-        if (rb != null)
-            rb.drag = grounded ? groundDrag : 0f;
+        rb.drag = grounded ? groundDrag : 0f;
 
         if (input != null && input.jump && readyToJump && grounded)
         {
@@ -64,12 +58,6 @@ public class PlayerMovement : NetworkBehaviour
             Jump();
             Invoke(nameof(ResetJump), jumpCooldown);
         }
-    }
-
-    private void FixedUpdate()
-    {
-        if (health != null && !health.IsAlive) return;
-        MovePlayer();
     }
 
     private void MovePlayer()
