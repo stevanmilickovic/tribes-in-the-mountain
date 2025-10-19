@@ -21,22 +21,14 @@ public class CameraBinder : NetworkBehaviour
             return;
         }
 
-        ThirdPersonCam cam = mainCam.GetComponentInChildren<ThirdPersonCam>();
+        ThirdPersonCam cam = mainCam.GetComponent<ThirdPersonCam>();
         if (cam == null)
         {
             Debug.LogWarning("PlayerCameraBinder: Could not find ThirdPersonCam under the main camera.");
             return;
         }
 
-        cam.player = transform;
-        cam.orientation = orientation;
-
-        CinemachineFreeLook freeLook = cam.GetComponent<CinemachineFreeLook>();
-        if (freeLook != null)
-        {
-            freeLook.Follow = playerObj;
-            freeLook.LookAt = playerObj;
-        }
+        cam.SetPlayerInfo(transform, orientation, playerObj);
 
         if (playerInputs != null)
             playerInputs.cameraRig = cam;

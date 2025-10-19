@@ -23,7 +23,7 @@ public class PlayerRotate : NetworkBehaviour
         }
     }
 
-    void Update()
+    void FixedUpdate()
     {
         if (input == null || playerObj == null || (health != null && !health.IsAlive)) return;
 

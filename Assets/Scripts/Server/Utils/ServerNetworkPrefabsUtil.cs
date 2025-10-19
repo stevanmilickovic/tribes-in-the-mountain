@@ -10,6 +10,7 @@ public static class ServerNetworkPrefabsUtil
         }
         rb.freezeRotation = true;
         rb.isKinematic = false;
+        rb.interpolation = RigidbodyInterpolation.Interpolate;
 
         return rb;
     }
