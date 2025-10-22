@@ -349,7 +349,7 @@ MonoBehaviour:
   _interpolation: 2
   _extrapolation: 0
   _enableTeleport: 1
-  _teleportThreshold: 1
+  _teleportThreshold: 3.4028235e+38
   _clientAuthoritative: 0
   _sendToOwner: 1
   _interval: 1

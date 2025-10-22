@@ -3,6 +3,7 @@ using UnityEngine;
 using FishNet.Object;
 using FishNet.Object.Synchronizing;
 using FishNet.Connection;
+using FishNet.Component.Transforming;
 
 [DisallowMultipleComponent]
 public class PlayerHealth : NetworkBehaviour
@@ -94,7 +95,6 @@ public class PlayerHealth : NetworkBehaviour
         Vector3 pos = (spawn ? spawn.position : transform.position);
         Quaternion rot = (spawn ? spawn.rotation : transform.rotation);
 
-        transform.SetPositionAndRotation(pos, rot);
         Target_SnapTo(Owner, pos, rot);
         if (_rb != null)
         {
@@ -113,7 +113,9 @@ public class PlayerHealth : NetworkBehaviour
     [TargetRpc]
     private void Target_SnapTo(NetworkConnection conn, Vector3 pos, Quaternion rot)
     {
+        var nt = GetComponent<NetworkTransform>();
         transform.SetPositionAndRotation(pos, rot);
+        nt.Teleport();
         if (_rb) { _rb.velocity = Vector3.zero; _rb.angularVelocity = Vector3.zero; }
     }
 
@@ -127,6 +129,24 @@ public class PlayerHealth : NetworkBehaviour
     {
         ApplyAliveLocally(alive);
         Rpc_SetAlive(alive);
+    }
+
+    public void ServerForceAlive(bool alive)
+    {
+        if (!IsServerInitialized) return;
+        SetAliveServer(alive);
+    }
+
+    public void ServerRestoreFull()
+    {
+        if (!IsServerInitialized) return;
+        currentHealth.Value = maxHealth;
+        SetAliveServer(true);
+        if (_rb)
+        {
+            _rb.velocity = Vector3.zero;
+            _rb.angularVelocity = Vector3.zero;
+        }
     }
 
     [ObserversRpc(BufferLast = false)]

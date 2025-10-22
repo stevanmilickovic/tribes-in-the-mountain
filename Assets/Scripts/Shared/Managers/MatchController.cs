@@ -2,6 +2,8 @@ using UnityEngine;
 using FishNet.Object;
 using FishNet.Object.Synchronizing;
 using FishNet.Connection;
+using System.Collections;
+using FishNet.Component.Transforming;
 
 public enum MatchState { PreRound, Live, PostRound }
 
@@ -17,6 +19,7 @@ public class MatchController : NetworkSingleton<MatchController>
 
     [Header("Match Config")]
     [SerializeField] private int roundSeconds = 600;
+    [SerializeField] private int intermissionSeconds = 5;
     [SerializeField] private int startingReservesTeamA = 30;
     [SerializeField] private int startingReservesTeamB = 30;
 
@@ -99,31 +102,28 @@ public class MatchController : NetworkSingleton<MatchController>
 
     public Transform GetSpawnForTeam(Team team)
     {
-        Debug.Log($"[Server] Getting spawn for team {team}");
         if (team == Team.TeamA) return teamASpawn;
         if (team == Team.TeamB) return teamBSpawn;
         return null;
     }
 
-    public void ServerOnPlayerSpawned(PlayerTeam player)
+    public void ServerOnPlayerSpawned(PlayerTeam player, bool consumeReserve = true)
     {
         if (!IsServerInitialized || player == null) return;
 
         switch (player.team.Value)
         {
             case Team.TeamA:
-                if (reservesA.Value > 0) reservesA.Value -= 1;
+                if (consumeReserve && reservesA.Value > 0) reservesA.Value -= 1;
                 aliveA.Value = Mathf.Max(0, aliveA.Value + 1);
                 break;
-
             case Team.TeamB:
-                if (reservesB.Value > 0) reservesB.Value -= 1;
+                if (consumeReserve && reservesB.Value > 0) reservesB.Value -= 1;
                 aliveB.Value = Mathf.Max(0, aliveB.Value + 1);
                 break;
         }
 
         PushCountsImmediate();
-
         CheckEliminationWin();
     }
 
@@ -131,15 +131,11 @@ public class MatchController : NetworkSingleton<MatchController>
     {
         if (!IsServerInitialized || player == null) return;
 
-        Debug.Log($"[Server] MatchController registering death of player {player.gameObject.name} on team {player.team.Value}");
-
         switch (player.team.Value)
         {
             case Team.TeamA: aliveA.Value = Mathf.Max(0, aliveA.Value - 1); break;
             case Team.TeamB: aliveB.Value = Mathf.Max(0, aliveB.Value - 1); break;
         }
-
-        Debug.Log($"[Server] After death, Team A alive: {aliveA.Value}, reserves: {reservesA.Value}; Team B alive: {aliveB.Value}, reserves: {reservesB.Value}");
 
         PushCountsImmediate();
 
@@ -188,9 +184,66 @@ public class MatchController : NetworkSingleton<MatchController>
     private void EndMatch(Team winner)
     {
         if (state.Value == MatchState.PostRound) return;
+
         state.Value = MatchState.PostRound;
         Rpc_OnMatchEnded(winner);
+
+        StartCoroutine(IntermissionThenRestart());
     }
+
+    private IEnumerator IntermissionThenRestart()
+    {
+        FreezeAllPlayers();
+        yield return new WaitForSeconds(intermissionSeconds);
+        StartNewRound();
+    }
+
+    private void FreezeAllPlayers()
+    {
+        var players = FindObjectsByType<PlayerHealth>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+        foreach (var ph in players)
+            ph.ServerForceAlive(false);
+    }
+
+    private void StartNewRound()
+    {
+        state.Value = MatchState.Live;
+        remainingSeconds.Value = Mathf.Max(1, roundSeconds);
+        reservesA.Value = Mathf.Max(0, startingReservesTeamA);
+        reservesB.Value = Mathf.Max(0, startingReservesTeamB);
+        aliveA.Value = 0;
+        aliveB.Value = 0;
+
+        var teams = FindObjectsByType<PlayerTeam>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+        foreach (var pt in teams)
+        {
+            var spawn = GetSpawnForTeam(pt.team.Value);
+            if (spawn == null) continue;
+
+            var pos = spawn.position;
+            var rot = spawn.rotation;
+
+            var nt = pt.GetComponent<NetworkTransform>();
+            if (nt != null)
+            {
+                pt.transform.SetPositionAndRotation(pos, rot);
+                nt.Teleport();
+            }
+            else
+            {
+                pt.transform.SetPositionAndRotation(pos, rot);
+            }
+
+            var ph = pt.GetComponent<PlayerHealth>();
+            if (ph != null)
+            {
+                ph.ServerRestoreFull();
+            }
+
+            ServerOnPlayerSpawned(pt, consumeReserve: false);
+        }
+    }
+
 
     [ObserversRpc(BufferLast = true)]
     private void Rpc_OnMatchEnded(Team winner)
