@@ -264,7 +264,6 @@ MonoBehaviour:
   playerInputs: {fileID: 7161943386019570500}
   orientation: {fileID: 7682557729649604570}
   playerObj: {fileID: 271099231719261030}
-  aimObj: {fileID: 0}
 --- !u!114 &1294418109039712168
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -349,7 +348,7 @@ MonoBehaviour:
   _useScaledTime: 1
   _interpolation: 2
   _extrapolation: 0
-  _enableTeleport: 0
+  _enableTeleport: 1
   _teleportThreshold: 1
   _clientAuthoritative: 0
   _sendToOwner: 1

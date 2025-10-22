@@ -3,16 +3,14 @@ using UnityEngine;
 using FishNet.Object;
 using FishNet.Transporting;
 using FishNet.Connection;
-using System;
 
 public class LobbySelectionGateway : NetworkSingleton<LobbySelectionGateway>
 {
     [SerializeField] private GameObject playerPrefab;
 
-    [SerializeField] private Transform teamASpawn;
-    [SerializeField] private Transform teamBSpawn;
-
     private readonly Dictionary<NetworkConnection, Team> _pending = new Dictionary<NetworkConnection, Team>();
+
+    private MatchController match => MatchController.Instance;
 
     public override void OnStartServer()
     {
@@ -52,7 +50,10 @@ public class LobbySelectionGateway : NetworkSingleton<LobbySelectionGateway>
         if (!_pending.TryGetValue(conn, out var team)) return;
         if (playerPrefab == null) return;
 
-        Transform sp = (team == Team.TeamA) ? teamASpawn : teamBSpawn;
+        if (!match.ServerCanTeamSpawn(team)) return;
+
+        Transform sp = match.GetSpawnForTeam(team);
+
         GameObject go = (sp != null)
             ? Instantiate(playerPrefab, sp.position, sp.rotation)
             : Instantiate(playerPrefab);
@@ -60,15 +61,12 @@ public class LobbySelectionGateway : NetworkSingleton<LobbySelectionGateway>
         base.NetworkManager.ServerManager.Spawn(go, conn);
 
         var pt = go.GetComponent<PlayerTeam>();
-        if (pt != null) pt.ServerSetTeam(team);
+        if (pt != null)
+        {
+            match.ServerJoinTeam(pt, team);
+            match.ServerOnPlayerSpawned(pt);
+        }
 
         _pending.Remove(conn);
-    }
-
-    internal Transform GetSpawnForTeam(Team team)
-    {
-        if (team == Team.None) return null;
-        if (team == Team.TeamA) return teamASpawn;
-        else return teamBSpawn;
     }
 }

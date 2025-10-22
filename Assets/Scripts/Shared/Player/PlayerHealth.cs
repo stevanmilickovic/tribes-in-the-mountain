@@ -19,10 +19,12 @@ public class PlayerHealth : NetworkBehaviour
     [Tooltip("Optional root for renderers to hide on death (leave null to keep visible).")]
     public Transform visualsRoot;
 
-    private Rigidbody _rb;
-    private PlayerMovement _movement;
-    private PlayerRotate _rotate;
-    private PlayerTeam _team;
+    private Rigidbody _rb => GetComponent<Rigidbody>();
+    private PlayerMovement _movement => GetComponent<PlayerMovement>();
+    private PlayerRotate _rotate => GetComponent<PlayerRotate>();
+    private PlayerTeam _team => GetComponent<PlayerTeam>();
+
+    private MatchController MatchController => MatchController.Instance;
 
     public bool IsAlive => currentHealth.Value > 0;
 
@@ -62,8 +64,13 @@ public class PlayerHealth : NetworkBehaviour
             _rb.angularVelocity = Vector3.zero;
         }
 
-        Rpc_OnDied();
+        Debug.Log(_team);
+        if (_team != null)
+        {
+            MatchController.ServerOnPlayerDied(_team);
+        }
 
+        Rpc_OnDied();
         StartCoroutine(RespawnRoutineServer());
     }
 
@@ -73,14 +80,22 @@ public class PlayerHealth : NetworkBehaviour
         if (t > 0f) yield return new WaitForSeconds(t);
 
         Team team = (_team != null) ? _team.team.Value : Team.None;
-        Transform spawn = LobbySelectionGateway.Instance.GetSpawnForTeam(team);
 
-        // Fallback: if no team or spawn found, just keep current transform
+        if (!MatchController.ServerCanTeamSpawn(team))
+        {
+            Target_OnBecameSpectator(Owner);
+            yield break;
+        }
+
+        Transform spawn = MatchController.GetSpawnForTeam(team);
+        
+        Debug.Log(spawn);
+
         Vector3 pos = (spawn ? spawn.position : transform.position);
         Quaternion rot = (spawn ? spawn.rotation : transform.rotation);
-        transform.SetPositionAndRotation(pos, rot);
 
         transform.SetPositionAndRotation(pos, rot);
+        Target_SnapTo(Owner, pos, rot);
         if (_rb != null)
         {
             _rb.velocity = Vector3.zero;
@@ -90,14 +105,37 @@ public class PlayerHealth : NetworkBehaviour
         currentHealth.Value = maxHealth;
         SetAliveServer(true);
 
+        if (_team != null) MatchController.ServerOnPlayerSpawned(_team);
+
         Rpc_OnRespawned(Owner, pos, rot);
+    }
+
+    [TargetRpc]
+    private void Target_SnapTo(NetworkConnection conn, Vector3 pos, Quaternion rot)
+    {
+        transform.SetPositionAndRotation(pos, rot);
+        if (_rb) { _rb.velocity = Vector3.zero; _rb.angularVelocity = Vector3.zero; }
+    }
+
+    [TargetRpc]
+    private void Target_OnBecameSpectator(NetworkConnection conn)
+    {
+        // TODO: switch to spectator camera/UI; player remains non-interactive.
     }
 
     private void SetAliveServer(bool alive)
     {
-        if (_movement != null) _movement.enabled = alive;
-        if (_rotate != null) _rotate.enabled = alive;
+        ApplyAliveLocally(alive);
+        Rpc_SetAlive(alive);
+    }
 
+    [ObserversRpc(BufferLast = false)]
+    private void Rpc_SetAlive(bool alive) => ApplyAliveLocally(alive);
+
+    private void ApplyAliveLocally(bool alive)
+    {
+        if (_movement) _movement.enabled = alive;
+        if (_rotate) _rotate.enabled = alive;
         SetRenderersEnabled(visualsRoot, alive);
     }
 

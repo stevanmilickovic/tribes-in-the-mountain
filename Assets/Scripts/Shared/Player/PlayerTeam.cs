@@ -8,52 +8,46 @@ public class PlayerTeam : NetworkBehaviour
 {
     public readonly SyncVar<Team> team = new();
 
-    private GameMode gameMode;
-    private TeamManager teams;
-
     public override void OnStartServer()
     {
         base.OnStartServer();
-        CacheModeRefs();
     }
 
     public override void OnStartClient()
     {
         base.OnStartClient();
-        if (!IsServerInitialized) CacheModeRefs();
-    }
-
-    private void CacheModeRefs()
-    {
-        gameMode = FindObjectOfType<GameMode>();
-        teams = gameMode != null ? gameMode.GetComponent<TeamManager>() : null;
     }
 
     [ServerRpc(RequireOwnership = true)]
     public void JoinTeam(Team desired)
     {
-        if (teams == null) CacheModeRefs();
-        if (teams == null) return;
+        if (!IsServerInitialized) return;
         if (desired == Team.None) return;
         if (team.Value == desired) return;
-        teams.Join(this, desired);
-        team.Value = desired;
+
+        if (MatchController.TryGet(out var match))
+            match.ServerJoinTeam(this, desired);
     }
 
     public void ServerSetTeam(Team desired)
     {
         if (!IsServerInitialized) return;
-        if (teams == null) CacheModeRefs();
-        if (teams == null) return;
         if (desired == Team.None) return;
-        teams.Join(this, desired);
-        team.Value = desired;
+
+        if (MatchController.TryGet(out var match))
+            match.ServerJoinTeam(this, desired);
     }
 
     public override void OnStopServer()
     {
         base.OnStopServer();
-        if (teams == null) CacheModeRefs();
-        if (teams != null) teams.Leave(this);
+        if (MatchController.TryGet(out var match))
+        {
+            if (team.Value != Team.None)
+            {
+                var tm = match.GetComponent<TeamManager>();
+                if (tm != null) tm.Leave(this);
+            }
+        }
     }
 }
