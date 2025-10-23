@@ -14,6 +14,9 @@ public class MatchController : NetworkSingleton<MatchController>
     [SerializeField] private Transform teamASpawn;
     [SerializeField] private Transform teamBSpawn;
 
+    [Header("Capture Zones")]
+    [SerializeField] private CaptureZone captureZone;
+
     [Header("Managers (auto-cached)")]
     [SerializeField] private TeamManager teamManager;
 
@@ -181,6 +184,13 @@ public class MatchController : NetworkSingleton<MatchController>
         }
     }
 
+    public void ServerOnZoneCaptured(Team capturingTeam)
+    {
+        if (!IsServerInitialized || state.Value != MatchState.Live) return;
+        Debug.Log($"Zone captured by {capturingTeam}, ending match.");
+        EndMatch(capturingTeam);
+    }
+
     private void EndMatch(Team winner)
     {
         if (state.Value == MatchState.PostRound) return;
@@ -241,6 +251,11 @@ public class MatchController : NetworkSingleton<MatchController>
             }
 
             ServerOnPlayerSpawned(pt, consumeReserve: false);
+        }
+
+        if (captureZone != null)
+        {
+            captureZone.ResetZone();
         }
     }
 
