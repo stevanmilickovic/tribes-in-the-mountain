@@ -24,6 +24,9 @@ public class PlayerMovement : NetworkBehaviour
     Vector3 moveDirection;
     Rigidbody rb;
 
+    private bool isCrouching;
+    private bool isProne;
+
     public override void OnStartServer()
     {
         rb = ServerNetworkPrefabsUtil.setGameObjectRigidbody(gameObject);
@@ -37,6 +40,40 @@ public class PlayerMovement : NetworkBehaviour
         {
             rb = ClientNetworkPrefabsUtil.setGameObjectRigidbody(gameObject);
             enabled = false;
+        }
+    }
+
+    private void Update()
+    {
+        CheckCrouchAndProne();
+    }
+
+    private void CheckCrouchAndProne()
+    {
+        if (input.crouch)
+        {
+            if (!isCrouching)
+            {
+                isCrouching = true;
+                isProne = false;
+            }
+            else
+            {
+                isCrouching = false;
+            }
+        }
+
+        if (input.prone)
+        {
+            if (!isProne)
+            {
+                isProne = true;
+                isCrouching = false;
+            }
+            else
+            {
+                isProne = false;
+            }
         }
     }
 
@@ -72,10 +109,21 @@ public class PlayerMovement : NetworkBehaviour
         Vector2 m = input.move;
         moveDirection = fwd * m.y + right * m.x;
 
+        float speedMultiplier = 1f;
+        if (isCrouching)
+        {
+            speedMultiplier = 0f;
+        }
+        
+        if (isProne)
+        {
+            speedMultiplier = 0.3f;
+        }
+
         if (grounded)
-            rb.AddForce(moveDirection.normalized * moveSpeed * 10f, ForceMode.Force);
+            rb.AddForce(moveDirection.normalized * moveSpeed * 10f * speedMultiplier, ForceMode.Force);
         else
-            rb.AddForce(moveDirection.normalized * moveSpeed * 10f * airMultiplier, ForceMode.Force);
+            rb.AddForce(moveDirection.normalized * moveSpeed * 10f * airMultiplier * speedMultiplier, ForceMode.Force);
     }
 
     private void SpeedControl()

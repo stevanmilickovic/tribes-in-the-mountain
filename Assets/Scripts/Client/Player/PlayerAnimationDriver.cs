@@ -16,6 +16,9 @@ public class PlayerAnimationDriver : NetworkBehaviour
     private float _aimWeight;
     private bool _wasAiming;
 
+    private bool wasCrouching;
+    private bool wasProne;
+
     public override void OnStartClient()
     {
         if (!IsOwner) { enabled = false; return; }
@@ -41,6 +44,39 @@ public class PlayerAnimationDriver : NetworkBehaviour
         else
         {
             anim.SetFloat("Speed", 0f);
+        }
+
+        if (input.prone)
+        {
+            if (!wasProne)
+            {
+                anim.SetBool("Prone", true);
+                anim.SetBool("Crouch", false);
+                anim.SetBool("Stand", false);
+                wasProne = true;
+            } else
+            {
+                anim.SetBool("Prone", false);
+                anim.SetBool("Stand", true);
+                wasProne = false;
+            }
+        }
+
+        if (input.crouch)
+        {
+            if (!wasCrouching)
+            {
+                anim.SetBool("Crouch", true);
+                anim.SetBool("Stand", false);
+                anim.SetBool("Prone", false);
+                wasCrouching = true;
+            }
+            else
+            {
+                anim.SetBool("Crouch", false);
+                anim.SetBool("Stand", true);
+                wasCrouching = false;
+            }
         }
 
         anim.SetBool("CombatMode", aiming);

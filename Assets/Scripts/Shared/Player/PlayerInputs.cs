@@ -16,6 +16,10 @@ public class PlayerInputs : NetworkBehaviour
     public bool firePressed;
     public bool isAiming;
 
+    [Header("Posture")]
+    public bool crouch;
+    public bool prone;
+
     public override void OnStartClient()
     {
         if (!IsOwner) enabled = false;
@@ -27,7 +31,7 @@ public class PlayerInputs : NetworkBehaviour
 
         CollectInputs();
 
-        SendInputServerRpc(move, jump, lookYawDeg, lookPitchDeg, firePressed, isAiming);
+        SendInputServerRpc(move, jump, lookYawDeg, lookPitchDeg, firePressed, isAiming, crouch, prone);
     }
 
     private void CollectInputs()
@@ -42,6 +46,18 @@ public class PlayerInputs : NetworkBehaviour
         bool fire = Input.GetMouseButton(0);
         bool aim = Input.GetMouseButton(1);
 
+        bool crouchButton = Input.GetKeyDown(KeyCode.LeftControl);
+        bool proneButton = Input.GetKeyDown(KeyCode.Z);
+
+        if (crouchButton)
+        {
+            proneButton = false;
+        }
+        if (proneButton)
+        {
+            crouchButton = false;
+        }
+
         float yaw = cameraRig ? cameraRig.lookYawDeg : 0f;
         float pit = cameraRig ? cameraRig.lookPitchDeg : 0f;
 
@@ -51,10 +67,12 @@ public class PlayerInputs : NetworkBehaviour
         lookPitchDeg = pit;
         firePressed = fire; 
         isAiming = aim;
+        crouch = crouchButton;
+        prone = proneButton;
     }
 
     [ServerRpc(RequireOwnership = true, RunLocally = false)]
-    private void SendInputServerRpc(Vector2 m, bool j, float yaw, float pit, bool fire, bool aim)
+    private void SendInputServerRpc(Vector2 m, bool j, float yaw, float pit, bool fire, bool aim, bool c, bool p)
     {
         move = m;
         jump = j;
@@ -62,5 +80,7 @@ public class PlayerInputs : NetworkBehaviour
         lookPitchDeg = pit;
         firePressed = fire;
         isAiming = aim;
+        crouch = c;
+        prone = p;
     }
 }
