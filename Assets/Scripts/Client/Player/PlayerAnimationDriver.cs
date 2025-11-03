@@ -1,5 +1,6 @@
 using UnityEngine;
 using FishNet.Object;
+using FishNet.Managing.Timing;
 
 public class PlayerAnimationDriver : NetworkBehaviour
 {
@@ -8,14 +9,11 @@ public class PlayerAnimationDriver : NetworkBehaviour
     public Animator anim;
 
     [Header("Animator Setup")]
-    [Tooltip("Index of the 'Aim' layer in the Animator (from the demo controller it’s 1).")]
     public int aimLayerIndex = 1;
-    [Tooltip("How fast to blend the aim layer.")]
     public float aimBlendSpeed = 3f;
 
     private float _aimWeight;
     private bool _wasAiming;
-
     private bool wasCrouching;
     private bool wasProne;
 
@@ -23,28 +21,28 @@ public class PlayerAnimationDriver : NetworkBehaviour
     {
         if (!IsOwner) { enabled = false; return; }
         if (anim) anim.applyRootMotion = false;
+
+        TimeManager.OnTick += OnTick;
     }
 
-    void Update()
+    public override void OnStopClient()
+    {
+        if (IsOwner && TimeManager != null)
+            TimeManager.OnTick -= OnTick;
+    }
+
+    private void OnTick()
     {
         if (!anim || !input) return;
 
-        float speed = 0f;
-        if (rb) speed = new Vector3(rb.velocity.x, 0f, rb.velocity.z).magnitude;
-        else speed = input.move.magnitude * 5f;
-
+        float speed = rb ? new Vector3(rb.velocity.x, 0f, rb.velocity.z).magnitude : input.move.magnitude * 5f;
         if (speed < 0.01f) speed = 0f;
 
         bool aiming = input.isAiming;
-
-        if (!aiming)
-        {
-            anim.SetFloat("Speed", speed);
-        }
-        else
-        {
-            anim.SetFloat("Speed", 0f);
-        }
+        anim.SetFloat("Speed", aiming ? 0f : speed);
+        anim.SetBool("CombatMode", aiming);
+        if (aiming && !_wasAiming)
+            anim.SetTrigger("Combat");
 
         if (input.prone)
         {
@@ -54,7 +52,8 @@ public class PlayerAnimationDriver : NetworkBehaviour
                 anim.SetBool("Crouch", false);
                 anim.SetBool("Stand", false);
                 wasProne = true;
-            } else
+            }
+            else
             {
                 anim.SetBool("Prone", false);
                 anim.SetBool("Stand", true);
@@ -78,11 +77,6 @@ public class PlayerAnimationDriver : NetworkBehaviour
                 wasCrouching = false;
             }
         }
-
-        anim.SetBool("CombatMode", aiming);
-
-        if (aiming && !_wasAiming)
-            anim.SetTrigger("Combat");
 
         float target = aiming ? 1f : 0f;
         _aimWeight = Mathf.MoveTowards(_aimWeight, target, aimBlendSpeed * Time.deltaTime);

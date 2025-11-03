@@ -1,5 +1,6 @@
 using UnityEngine;
 using FishNet.Object;
+using FishNet.Managing.Timing;
 
 [DisallowMultipleComponent]
 public class PlayerShoot : NetworkBehaviour
@@ -23,50 +24,56 @@ public class PlayerShoot : NetworkBehaviour
     private float _nextAllowedShotTime;
     private bool _lastFireHeld;
 
-    public override void OnStartServer()
+    public struct ShootData
     {
-        base.OnStartServer();
-        enabled = true;
+        public bool firePressed;
     }
 
     public override void OnStartClient()
     {
-        if (!IsServerInitialized)
-        {
-            enabled = false;
-        }
+        if (!IsOwner) return;
+        TimeManager.OnTick += OnTick;
     }
 
-    private void Update()
+    public override void OnStopClient()
     {
-        if (!IsServerInitialized) return;
+        if (IsOwner && TimeManager != null)
+            TimeManager.OnTick -= OnTick;
+    }
+
+    private void OnTick()
+    {
+        if (!IsOwner) return;
         if (health != null && !health.IsAlive) return;
         if (input == null || orientation == null) return;
 
-        bool fireHeld = input.firePressed;
-        bool firePressedThisFrame = fireHeld && !_lastFireHeld;
-        _lastFireHeld = fireHeld;
-
-        if (firePressedThisFrame)
-            TryFireServer();
+        ShootData sd = new ShootData { firePressed = input.firePressed };
+        if (sd.firePressed)
+            TryFire();
     }
 
-    private void TryFireServer()
+    private void TryFire()
+    {
+        if (_isReloading) return;
+        if (Time.time < _nextAllowedShotTime) return;
+
+        ServerTryFire();
+    }
+
+    [ServerRpc]
+    private void ServerTryFire()
     {
         if (_isReloading) return;
         if (Time.time < _nextAllowedShotTime) return;
         if (orientation == null) return;
+        if (health != null && !health.IsAlive) return;
 
         Vector3 origin = orientation.position;
         Vector3 dir = orientation.forward;
 
         if (Physics.Raycast(origin, dir, out RaycastHit hit, maxRange, playerHitboxMask, QueryTriggerInteraction.Ignore))
         {
-            if (hit.collider.transform.root == transform.root)
-            {
-                // do nothing
-            }
-            else
+            if (hit.collider.transform.root != transform.root)
             {
                 var targetHealth = hit.collider.GetComponentInParent<PlayerHealth>();
                 if (targetHealth != null && targetHealth.IsAlive)
@@ -90,9 +97,9 @@ public class PlayerShoot : NetworkBehaviour
         return otherTeam.team.Value == team.team.Value && team.team.Value != Team.None;
     }
 
+    [Server]
     private void FinishReloadServer()
     {
-        if (!IsServerInitialized) return;
         _isReloading = false;
     }
 }

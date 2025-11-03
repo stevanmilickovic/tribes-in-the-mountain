@@ -1,5 +1,7 @@
 using UnityEngine;
 using FishNet.Object;
+using FishNet.Managing;
+using FishNet;
 
 public class PlayerInputs : NetworkBehaviour
 {
@@ -20,67 +22,83 @@ public class PlayerInputs : NetworkBehaviour
     public bool crouch;
     public bool prone;
 
+    private bool _prevJumpHeld;
+    private bool _prevFireHeld;
+    private bool _prevAimHeld;
+    private bool _prevCrouchHeld;
+    private bool _prevProneHeld;
+
     public override void OnStartClient()
     {
-        if (!IsOwner) enabled = false;
+        if (!IsOwner) { enabled = false; return; }
+        var tm = InstanceFinder.TimeManager;
+        if (tm != null)
+        {
+            tm.OnTick += OnTick;
+            tm.OnPostTick += OnPostTick;
+        }
     }
 
-    void Update()
+    public override void OnStopClient()
     {
-        if (!IsOwner) return;
-
-        CollectInputs();
-
-        SendInputServerRpc(move, jump, lookYawDeg, lookPitchDeg, firePressed, isAiming, crouch, prone);
+        var tm = InstanceFinder.TimeManager;
+        if (tm != null)
+        {
+            tm.OnTick -= OnTick;
+            tm.OnPostTick -= OnPostTick;
+        }
     }
 
-    private void CollectInputs()
+    private void OnTick()
+    {
+        CollectInputsTick();
+    }
+
+    private void OnPostTick()
+    {
+        jump = false;
+        crouch = false;
+        prone = false;
+        firePressed = false;
+    }
+
+    private void CollectInputsTick()
     {
         float horizontal = Input.GetAxisRaw("Horizontal");
         float vertical = Input.GetAxisRaw("Vertical");
         Vector2 movementVector = new Vector2(horizontal, vertical);
         if (movementVector.sqrMagnitude > 1f) movementVector.Normalize();
 
-        bool jumpKey = Input.GetKey(KeyCode.Space);
+        bool jumpHeld = Input.GetKey(KeyCode.Space);
+        bool fireHeld = Input.GetMouseButton(0);
+        bool aimHeld = Input.GetMouseButton(1);
+        bool crouchHeld = Input.GetKey(KeyCode.LeftControl);
+        bool proneHeld = Input.GetKey(KeyCode.Z);
 
-        bool fire = Input.GetMouseButton(0);
-        bool aim = Input.GetMouseButton(1);
+        bool jumpDown = jumpHeld && !_prevJumpHeld;
+        bool fireDown = fireHeld && !_prevFireHeld;
+        bool crouchDown = crouchHeld && !_prevCrouchHeld;
+        bool proneDown = proneHeld && !_prevProneHeld;
 
-        bool crouchButton = Input.GetKeyDown(KeyCode.LeftControl);
-        bool proneButton = Input.GetKeyDown(KeyCode.Z);
-
-        if (crouchButton)
-        {
-            proneButton = false;
-        }
-        if (proneButton)
-        {
-            crouchButton = false;
-        }
+        if (crouchDown) proneDown = false;
+        if (proneDown) crouchDown = false;
 
         float yaw = cameraRig ? cameraRig.lookYawDeg : 0f;
         float pit = cameraRig ? cameraRig.lookPitchDeg : 0f;
 
-        move = movementVector; 
-        jump = jumpKey; 
-        lookYawDeg = yaw; 
-        lookPitchDeg = pit;
-        firePressed = fire; 
-        isAiming = aim;
-        crouch = crouchButton;
-        prone = proneButton;
-    }
-
-    [ServerRpc(RequireOwnership = true, RunLocally = false)]
-    private void SendInputServerRpc(Vector2 m, bool j, float yaw, float pit, bool fire, bool aim, bool c, bool p)
-    {
-        move = m;
-        jump = j;
+        move = movementVector;
+        jump = jumpDown;
         lookYawDeg = yaw;
         lookPitchDeg = pit;
-        firePressed = fire;
-        isAiming = aim;
-        crouch = c;
-        prone = p;
+        firePressed = fireDown;
+        isAiming = aimHeld;
+        crouch = crouchDown;
+        prone = proneDown;
+
+        _prevJumpHeld = jumpHeld;
+        _prevFireHeld = fireHeld;
+        _prevAimHeld = aimHeld;
+        _prevCrouchHeld = crouchHeld;
+        _prevProneHeld = proneHeld;
     }
 }

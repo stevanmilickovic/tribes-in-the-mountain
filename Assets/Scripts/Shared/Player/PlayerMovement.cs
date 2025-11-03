@@ -1,5 +1,7 @@
 using UnityEngine;
 using FishNet.Object;
+using FishNet.Object.Prediction;
+using FishNet.Transporting;
 
 public class PlayerMovement : NetworkBehaviour
 {
@@ -11,135 +13,181 @@ public class PlayerMovement : NetworkBehaviour
     public float jumpForce;
     public float jumpCooldown;
     public float airMultiplier;
-    bool readyToJump;
+    private bool readyToJump = true;
 
     [Header("Ground Check")]
     public float playerHeight;
     public LayerMask whatIsGround;
-    bool grounded;
 
     public PlayerInputs input;
     public PlayerHealth health;
 
-    Vector3 moveDirection;
-    Rigidbody rb;
-
+    private Rigidbody rb;
+    private bool grounded;
     private bool isCrouching;
     private bool isProne;
+    private Vector3 moveDirection;
 
-    public override void OnStartServer()
+    public struct MoveData : IReplicateData
     {
-        rb = ServerNetworkPrefabsUtil.setGameObjectRigidbody(gameObject);
-        enabled = true;
-        readyToJump = true;
+        public Vector2 move;
+        public bool jump;
+        public bool crouch;
+        public bool prone;
+        public float yaw;
+        private uint _tick;
+        public void Dispose() { }
+        public uint GetTick() => _tick;
+        public void SetTick(uint value) => _tick = value;
     }
 
-    public override void OnStartClient()
+    public struct ReconcileData : IReconcileData
     {
-        if (!IsServerInitialized)
+        public Vector3 position;
+        public Vector3 velocity;
+        public Quaternion rotation;
+        private uint _tick;
+        public void Dispose() { }
+        public uint GetTick() => _tick;
+        public void SetTick(uint value) => _tick = value;
+    }
+
+    public override void OnStartNetwork()
+    {
+        base.OnStartNetwork();
+        rb = GetComponent<Rigidbody>();
+        TimeManager.OnTick += OnTick;
+        TimeManager.OnPostTick += OnPostTick;
+    }
+
+    public override void OnStopNetwork()
+    {
+        base.OnStopNetwork();
+        if (TimeManager != null)
         {
-            rb = ClientNetworkPrefabsUtil.setGameObjectRigidbody(gameObject);
-            enabled = false;
+            TimeManager.OnTick -= OnTick;
+            TimeManager.OnPostTick -= OnPostTick;
         }
     }
 
-    private void Update()
+    private void OnTick()
     {
-        CheckCrouchAndProne();
-    }
-
-    private void CheckCrouchAndProne()
-    {
-        if (input.crouch)
-        {
-            if (!isCrouching)
-            {
-                isCrouching = true;
-                isProne = false;
-            }
-            else
-            {
-                isCrouching = false;
-            }
-        }
-
-        if (input.prone)
-        {
-            if (!isProne)
-            {
-                isProne = true;
-                isCrouching = false;
-            }
-            else
-            {
-                isProne = false;
-            }
-        }
-    }
-
-    private void FixedUpdate()
-    {
+        if (!IsOwner) return;
         if (health != null && !health.IsAlive) return;
 
-        grounded = Physics.Raycast(transform.position, Vector3.down, playerHeight * 0.5f + 0.3f, whatIsGround);
+        MoveData md = new MoveData
+        {
+            move = input.move,
+            jump = input.jump,
+            crouch = input.crouch,
+            prone = input.prone,
+            yaw = input.lookYawDeg
+        };
 
-        MovePlayer();
+        Replicate(md);
+    }
 
+    private void OnPostTick()
+    {
+        if (!IsServerInitialized) return;
+        CreateReconcile();
+    }
+
+    [Replicate]
+    private void Replicate(MoveData md, ReplicateState state = ReplicateState.Invalid, Channel channel = Channel.Unreliable)
+    {
+        ApplyInput(md);
+        GroundCheck();
+        ApplyForces(md);
         SpeedControl();
 
-        rb.drag = grounded ? groundDrag : 0f;
+        if (rb.angularVelocity.sqrMagnitude > 0.0001f)
+            rb.angularVelocity *= 0.9f;
+        else
+            rb.angularVelocity = Vector3.zero;
 
-        if (input != null && input.jump && readyToJump && grounded)
+        rb.drag = grounded ? groundDrag : 0f;
+    }
+
+    [Reconcile]
+    private void Reconcile(ReconcileData rd, Channel channel = Channel.Unreliable)
+    {
+        transform.SetPositionAndRotation(rd.position, rd.rotation);
+        rb.velocity = rd.velocity;
+    }
+
+    private void ApplyInput(MoveData md)
+    {
+        Quaternion basis = Quaternion.Euler(0f, md.yaw, 0f);
+        Vector3 fwd = basis * Vector3.forward;
+        Vector3 right = basis * Vector3.right;
+        moveDirection = fwd * md.move.y + right * md.move.x;
+
+        if (md.crouch)
+        {
+            isCrouching = !isCrouching;
+            isProne = false;
+        }
+        if (md.prone)
+        {
+            isProne = !isProne;
+            isCrouching = false;
+        }
+
+        if (md.jump && grounded && readyToJump)
         {
             readyToJump = false;
-            Jump();
-            Invoke(nameof(ResetJump), jumpCooldown);
+            rb.velocity = new Vector3(rb.velocity.x, 0f, rb.velocity.z);
+            rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
+            TimeManager.Invoke(nameof(ResetJump), jumpCooldown);
         }
     }
 
-    private void MovePlayer()
+    private void GroundCheck()
     {
-        if (input == null || rb == null) return;
+        grounded = Physics.Raycast(transform.position, Vector3.down, playerHeight * 0.5f + 0.3f, whatIsGround);
+    }
 
-        float yaw = input.lookYawDeg;
-        Quaternion basis = Quaternion.Euler(0f, yaw, 0f);
-        Vector3 fwd = basis * Vector3.forward;
-        Vector3 right = basis * Vector3.right;
+    private void ApplyForces(MoveData md)
+    {
+        float speedMult = 1f;
+        if (isCrouching) speedMult = 0.5f;
+        if (isProne) speedMult = 0.3f;
 
-        Vector2 m = input.move;
-        moveDirection = fwd * m.y + right * m.x;
+        Vector3 dir = moveDirection.sqrMagnitude > 0.0001f ? moveDirection.normalized : Vector3.zero;
 
-        float speedMultiplier = 1f;
-        if (isCrouching)
-        {
-            speedMultiplier = 0f;
-        }
-        
-        if (isProne)
-        {
-            speedMultiplier = 0.3f;
-        }
-
+        float baseForce = moveSpeed * 10f * speedMult;
         if (grounded)
-            rb.AddForce(moveDirection.normalized * moveSpeed * 10f * speedMultiplier, ForceMode.Force);
+            rb.AddForce(dir * baseForce, ForceMode.Force);
         else
-            rb.AddForce(moveDirection.normalized * moveSpeed * 10f * airMultiplier * speedMultiplier, ForceMode.Force);
+            rb.AddForce(dir * baseForce * airMultiplier, ForceMode.Force);
     }
 
     private void SpeedControl()
     {
+        float speedMult = 1f;
+        if (isCrouching) speedMult = 0.5f;
+        if (isProne) speedMult = 0.3f;
+
         Vector3 flatVel = new Vector3(rb.velocity.x, 0f, rb.velocity.z);
-        if (flatVel.magnitude > moveSpeed)
+        float max = moveSpeed * speedMult;
+        if (flatVel.magnitude > max)
         {
-            Vector3 limitedVel = flatVel.normalized * moveSpeed;
-            rb.velocity = new Vector3(limitedVel.x, rb.velocity.y, limitedVel.z);
+            Vector3 limited = flatVel.normalized * max;
+            rb.velocity = new Vector3(limited.x, rb.velocity.y, limited.z);
         }
     }
 
-    private void Jump()
-    {
-        rb.velocity = new Vector3(rb.velocity.x, 0f, rb.velocity.z);
-        rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
-    }
     private void ResetJump() => readyToJump = true;
+
+    public override void CreateReconcile()
+    {
+        ReconcileData rd = new ReconcileData
+        {
+            position = transform.position,
+            velocity = rb.velocity,
+            rotation = transform.rotation
+        };
+        Reconcile(rd, Channel.Unreliable);
+    }
 }
