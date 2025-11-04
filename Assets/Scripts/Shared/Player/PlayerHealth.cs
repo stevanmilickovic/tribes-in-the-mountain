@@ -89,18 +89,13 @@ public class PlayerHealth : NetworkBehaviour
         }
 
         Transform spawn = MatchController.GetSpawnForTeam(team);
-        
-        Debug.Log(spawn);
 
         Vector3 pos = (spawn ? spawn.position : transform.position);
         Quaternion rot = (spawn ? spawn.rotation : transform.rotation);
 
-        Target_SnapTo(Owner, pos, rot);
-        if (_rb != null)
-        {
-            _rb.velocity = Vector3.zero;
-            _rb.angularVelocity = Vector3.zero;
-        }
+        ServerSnapTo(pos, rot);
+
+        yield return null;
 
         currentHealth.Value = maxHealth;
         SetAliveServer(true);
@@ -110,13 +105,13 @@ public class PlayerHealth : NetworkBehaviour
         Rpc_OnRespawned(Owner, pos, rot);
     }
 
-    [TargetRpc]
-    private void Target_SnapTo(NetworkConnection conn, Vector3 pos, Quaternion rot)
+    private void ServerSnapTo(Vector3 pos, Quaternion rot)
     {
         var nt = GetComponent<NetworkTransform>();
         transform.SetPositionAndRotation(pos, rot);
+        _rb.velocity = Vector3.zero; 
+        _rb.angularVelocity = Vector3.zero;
         nt.Teleport();
-        if (_rb) { _rb.velocity = Vector3.zero; _rb.angularVelocity = Vector3.zero; }
     }
 
     [TargetRpc]

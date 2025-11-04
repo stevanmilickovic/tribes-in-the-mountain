@@ -82,5 +82,13 @@ public class PlayerInputs : NetworkBehaviour
         isAiming = aim;
         crouch = c;
         prone = p;
+
+        var mv = GetComponent<PlayerMovement>();
+        if (mv != null)
+        {
+            if (c) mv.ServerToggleCrouch();
+            if (p) mv.ServerToggleProne();
+        }
     }
+
 }

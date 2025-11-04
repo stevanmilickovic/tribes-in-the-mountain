@@ -24,8 +24,13 @@ public class PlayerMovement : NetworkBehaviour
     Vector3 moveDirection;
     Rigidbody rb;
 
+    public PlayerAnimState animState;
+
     private bool isCrouching;
     private bool isProne;
+
+    private bool _lastCrouchPulse;
+    private bool _lastPronePulse;
 
     public override void OnStartServer()
     {
@@ -45,36 +50,7 @@ public class PlayerMovement : NetworkBehaviour
 
     private void Update()
     {
-        CheckCrouchAndProne();
-    }
-
-    private void CheckCrouchAndProne()
-    {
-        if (input.crouch)
-        {
-            if (!isCrouching)
-            {
-                isCrouching = true;
-                isProne = false;
-            }
-            else
-            {
-                isCrouching = false;
-            }
-        }
-
-        if (input.prone)
-        {
-            if (!isProne)
-            {
-                isProne = true;
-                isCrouching = false;
-            }
-            else
-            {
-                isProne = false;
-            }
-        }
+        animState.IsAiming.Value = (input != null && input.isAiming);
     }
 
     private void FixedUpdate()
@@ -142,4 +118,25 @@ public class PlayerMovement : NetworkBehaviour
         rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
     }
     private void ResetJump() => readyToJump = true;
+
+    public void ServerToggleCrouch()
+    {
+        isCrouching = !isCrouching;
+        if (isCrouching) isProne = false;
+        if (animState != null)
+        {
+            animState.IsCrouching.Value = isCrouching;
+            animState.IsProne.Value = isProne;
+        }
+    }
+    public void ServerToggleProne()
+    {
+        isProne = !isProne;
+        if (isProne) isCrouching = false;
+        if (animState != null)
+        {
+            animState.IsCrouching.Value = isCrouching;
+            animState.IsProne.Value = isProne;
+        }
+    }
 }

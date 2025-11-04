@@ -76,6 +76,7 @@ GameObject:
   - component: {fileID: 2872090865942907698}
   - component: {fileID: 5924861520208318945}
   - component: {fileID: 5153675513797899763}
+  - component: {fileID: 4232939489736795114}
   m_Layer: 11
   m_Name: Player
   m_TagString: Untagged
@@ -123,9 +124,9 @@ Rigidbody:
   m_ImplicitCom: 1
   m_ImplicitTensor: 1
   m_UseGravity: 1
-  m_IsKinematic: 1
+  m_IsKinematic: 0
   m_Interpolate: 0
-  m_Constraints: 0
+  m_Constraints: 112
   m_CollisionDetection: 1
 --- !u!114 &7705465345961773221
 MonoBehaviour:
@@ -153,6 +154,7 @@ MonoBehaviour:
     m_Bits: 1024
   input: {fileID: 7161943386019570500}
   health: {fileID: 0}
+  animState: {fileID: 4232939489736795114}
 --- !u!114 &7161943386019570500
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -175,6 +177,8 @@ MonoBehaviour:
   lookPitchDeg: 0
   firePressed: 0
   isAiming: 0
+  crouch: 0
+  prone: 0
 --- !u!114 &8189567804932176246
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -240,6 +244,7 @@ MonoBehaviour:
   - {fileID: -884552524095050793}
   - {fileID: 2872090865942907698}
   - {fileID: 5924861520208318945}
+  - {fileID: 5153675513797899763}
   InitializedParentNetworkBehaviour: {fileID: 0}
   InitializedNestedNetworkObjects: []
   RuntimeParentNetworkBehaviour: {fileID: 0}
@@ -298,7 +303,7 @@ MonoBehaviour:
   _interpolation: 2
   _extrapolation: 0
   _enableTeleport: 1
-  _teleportThreshold: 3.4028235e+38
+  _teleportThreshold: 1
   _clientAuthoritative: 0
   _sendToOwner: 1
   _interval: 1
@@ -390,16 +395,30 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4108b3188c07a204883dd56850126779, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _componentIndexCache: 255
+  _componentIndexCache: 8
   _addedNetworkObject: {fileID: 1294418109039712168}
-  _networkObjectCache: {fileID: 0}
+  _networkObjectCache: {fileID: 1294418109039712168}
   input: {fileID: 7161943386019570500}
   rb: {fileID: 205137303601787795}
   anim: {fileID: 2815451387539440504}
   aimLayerIndex: 1
   aimBlendSpeed: 3
-  runSpeedMps: 6
-  aimSpeedCap01: 0.35
+  state: {fileID: 4232939489736795114}
+--- !u!114 &4232939489736795114
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1715684365727957010}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 26ae4bae13ad62a4eb725d350a6b540a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _componentIndexCache: 255
+  _addedNetworkObject: {fileID: 1294418109039712168}
+  _networkObjectCache: {fileID: 0}
 --- !u!1 &3735577750373151970
 GameObject:
   m_ObjectHideFlags: 0

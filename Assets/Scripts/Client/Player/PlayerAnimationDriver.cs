@@ -14,30 +14,54 @@ public class PlayerAnimationDriver : NetworkBehaviour
     public float aimBlendSpeed = 3f;
 
     private float _aimWeight;
-    private bool _wasAiming;
+    private bool _wasAiming; 
+    private Vector3 _lastPos;
+    private bool _hasLast;
 
-    private bool wasCrouching;
-    private bool wasProne;
+    public PlayerAnimState state;
 
     public override void OnStartClient()
     {
-        if (!IsOwner) { enabled = false; return; }
         if (anim) anim.applyRootMotion = false;
     }
 
-    void Update()
+    void LateUpdate()
     {
-        if (!anim || !input) return;
 
-        float speed = 0f;
-        if (rb) speed = new Vector3(rb.velocity.x, 0f, rb.velocity.z).magnitude;
-        else speed = input.move.magnitude * 5f;
+        float speed = CalculateSpeedFromTransform();
 
-        if (speed < 0.01f) speed = 0f;
+        bool aiming = state.IsAiming.Value;
 
-        bool aiming = input.isAiming;
+        anim.SetBool("CombatMode", aiming);
 
-        if (!aiming)
+        if (aiming && !_wasAiming)
+            anim.SetTrigger("Combat");
+
+        SetAnimatorSpeed(speed);
+
+        anim.SetBool("Prone", state.IsProne.Value);
+        anim.SetBool("Crouch", state.IsCrouching.Value);
+        anim.SetBool("Stand", !state.IsProne.Value && !state.IsCrouching.Value);
+
+        SetAnimatorLayerWeigth();
+
+        _wasAiming = aiming;
+    }
+
+    private float CalculateSpeedFromTransform()
+    {
+        if (!_hasLast) { _lastPos = transform.position; _hasLast = true; return 0f; }
+        Vector3 cur = transform.position;
+        Vector3 d = cur - _lastPos; d.y = 0f;
+        _lastPos = cur;
+        float dt = Mathf.Max(Time.deltaTime, 0.0001f);
+        float s = d.magnitude / dt;
+        return (s < 0.02f) ? 0f : s;
+    }
+
+    private void SetAnimatorSpeed(float speed)
+    {
+        if (!state.IsAiming.Value)
         {
             anim.SetFloat("Speed", speed);
         }
@@ -45,51 +69,14 @@ public class PlayerAnimationDriver : NetworkBehaviour
         {
             anim.SetFloat("Speed", 0f);
         }
+    }
 
-        if (input.prone)
-        {
-            if (!wasProne)
-            {
-                anim.SetBool("Prone", true);
-                anim.SetBool("Crouch", false);
-                anim.SetBool("Stand", false);
-                wasProne = true;
-            } else
-            {
-                anim.SetBool("Prone", false);
-                anim.SetBool("Stand", true);
-                wasProne = false;
-            }
-        }
-
-        if (input.crouch)
-        {
-            if (!wasCrouching)
-            {
-                anim.SetBool("Crouch", true);
-                anim.SetBool("Stand", false);
-                anim.SetBool("Prone", false);
-                wasCrouching = true;
-            }
-            else
-            {
-                anim.SetBool("Crouch", false);
-                anim.SetBool("Stand", true);
-                wasCrouching = false;
-            }
-        }
-
-        anim.SetBool("CombatMode", aiming);
-
-        if (aiming && !_wasAiming)
-            anim.SetTrigger("Combat");
-
-        float target = aiming ? 1f : 0f;
+    private void SetAnimatorLayerWeigth()
+    {
+        float target = state.IsAiming.Value ? 1f : 0f;
         _aimWeight = Mathf.MoveTowards(_aimWeight, target, aimBlendSpeed * Time.deltaTime);
         _aimWeight = Mathf.Clamp01(_aimWeight);
         if (aimLayerIndex >= 0 && aimLayerIndex < anim.layerCount)
             anim.SetLayerWeight(aimLayerIndex, _aimWeight);
-
-        _wasAiming = aiming;
     }
 }

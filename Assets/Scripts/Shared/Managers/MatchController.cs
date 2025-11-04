@@ -233,22 +233,11 @@ public class MatchController : NetworkSingleton<MatchController>
             var pos = spawn.position;
             var rot = spawn.rotation;
 
-            var nt = pt.GetComponent<NetworkTransform>();
-            if (nt != null)
-            {
-                pt.transform.SetPositionAndRotation(pos, rot);
-                nt.Teleport();
-            }
-            else
-            {
-                pt.transform.SetPositionAndRotation(pos, rot);
-            }
-
             var ph = pt.GetComponent<PlayerHealth>();
-            if (ph != null)
-            {
-                ph.ServerRestoreFull();
-            }
+            ph.ServerForceAlive(true);
+            ph.ServerRestoreFull();
+
+            ServerSnapTo(pt, pos, rot);
 
             ServerOnPlayerSpawned(pt, consumeReserve: false);
         }
@@ -257,6 +246,14 @@ public class MatchController : NetworkSingleton<MatchController>
         {
             captureZone.ResetZone();
         }
+    }
+
+    private void ServerSnapTo(PlayerTeam pt, Vector3 pos, Quaternion rot)
+    {
+        pt.transform.SetPositionAndRotation(pos, rot);
+        pt.GetComponent<Rigidbody>().velocity = Vector3.zero;
+        pt.GetComponent<Rigidbody>().angularVelocity = Vector3.zero;
+        pt.GetComponent<NetworkTransform>().Teleport();
     }
 
 
