@@ -1,98 +1,60 @@
 using UnityEngine;
-using FishNet.Object;
+using FishNet.Object.Prediction;
+using System.Collections;
 
-[DisallowMultipleComponent]
-public class PlayerShoot : NetworkBehaviour
+public class PlayerShoot
 {
-    [Header("Refs")]
-    public Transform orientation;
-    public PlayerInputs input;
-    public PlayerHealth health;
-    public PlayerTeam team;
-
-    [Header("Tuning")]
     public int damage = 100;
     public float maxRange = 150f;
     public float reloadSeconds = 6f;
-    public LayerMask playerHitboxMask;
-
-    [Header("Debug")]
+    public uint fireCooldownTicks = 3;
     public bool allowFriendlyFire = false;
 
-    private bool _isReloading;
-    private float _nextAllowedShotTime;
-    private bool _lastFireHeld;
-
-    public override void OnStartServer()
+    public void ProcessFire(InputData rd, ref bool isReloading, ref uint nextAllowedFireTick, uint currentTick, PlayerMotor motor, PredictionRigidbody body)
     {
-        base.OnStartServer();
-        enabled = true;
-    }
+        if (isReloading) return;
+        if (!rd.FirePressedEdge) return;
+        if (currentTick < nextAllowedFireTick) return;
 
-    public override void OnStartClient()
-    {
-        if (!IsServerInitialized)
+        nextAllowedFireTick = currentTick + fireCooldownTicks;
+        isReloading = true;
+
+        if (motor.IsServerInitialized)
+            motor.StartCoroutine(FinishReload(motor, reloadSeconds));
+
+        if (!motor.IsServerInitialized) return;
+        if (motor.Health != null && !motor.Health.IsAlive) return;
+        if (motor.Orientation == null) return;
+
+        Vector3 origin = motor.Orientation.position;
+        Vector3 dir = motor.Orientation.forward;
+
+        if (Physics.Raycast(origin, dir, out RaycastHit hit, maxRange, ~0, QueryTriggerInteraction.Ignore))
         {
-            enabled = false;
-        }
-    }
-
-    private void Update()
-    {
-        if (!IsServerInitialized) return;
-        if (health != null && !health.IsAlive) return;
-        if (input == null || orientation == null) return;
-
-        bool fireHeld = input.firePressed;
-        bool firePressedThisFrame = fireHeld && !_lastFireHeld;
-        _lastFireHeld = fireHeld;
-
-        if (firePressedThisFrame)
-            TryFireServer();
-    }
-
-    private void TryFireServer()
-    {
-        if (_isReloading) return;
-        if (Time.time < _nextAllowedShotTime) return;
-        if (orientation == null) return;
-
-        Vector3 origin = orientation.position;
-        Vector3 dir = orientation.forward;
-
-        if (Physics.Raycast(origin, dir, out RaycastHit hit, maxRange, playerHitboxMask, QueryTriggerInteraction.Ignore))
-        {
-            if (hit.collider.transform.root == transform.root)
-            {
-                // do nothing
-            }
-            else
+            if (hit.collider.transform.root != motor.transform.root)
             {
                 var targetHealth = hit.collider.GetComponentInParent<PlayerHealth>();
                 if (targetHealth != null && targetHealth.IsAlive)
                 {
-                    if (allowFriendlyFire || !SameTeamAs(targetHealth))
-                        targetHealth.TakeDamageServer(damage, NetworkObject);
+                    if (allowFriendlyFire || !SameTeamAs(motor.Team, targetHealth))
+                        targetHealth.TakeDamageServer(damage, motor.NetworkObject);
                 }
             }
         }
-
-        _isReloading = true;
-        _nextAllowedShotTime = Time.time + 0.05f;
-        Invoke(nameof(FinishReloadServer), Mathf.Max(0f, reloadSeconds));
     }
 
-    private bool SameTeamAs(PlayerHealth other)
+    private IEnumerator FinishReload(PlayerMotor motor, float wait)
     {
-        if (team == null) return false;
-        var otherTeam = other.GetComponent<PlayerTeam>();
+        yield return new WaitForSeconds(wait);
+        if (!motor.IsServerInitialized) yield break;
+        motor.SetReloading(false);
+    }
+
+    private bool SameTeamAs(PlayerTeam myTeam, PlayerHealth otherHealth)
+    {
+        if (myTeam == null) return false;
+        var otherTeam = otherHealth.GetComponent<PlayerTeam>();
         if (otherTeam == null) return false;
-        return otherTeam.team.Value == team.team.Value && team.team.Value != Team.None;
-    }
-
-    private void FinishReloadServer()
-    {
-        if (!IsServerInitialized) return;
-        _isReloading = false;
+        return otherTeam.team.Value == myTeam.team.Value && myTeam.team.Value != Team.None;
     }
 }

@@ -28,6 +28,19 @@ public class ThirdPersonCam : MonoBehaviour
 
     private PlayerInputs playerInputs;
 
+    void Start()
+    {
+        //crosshair.SetActive(false);
+        //freeCam.Priority = activePriority;
+        //aimCam.Priority = inactivePriority;
+
+        //aimCam.m_XAxis.Value = freeCam.m_XAxis.Value;
+        //aimCam.m_YAxis.Value = freeCam.m_YAxis.Value;
+
+        //var y = player.eulerAngles.y;
+        //orientation.rotation = Quaternion.Euler(0f, y, 0f);
+    }
+
     public void SetPlayerInfo(Transform player, Transform orientation, Transform playerObj)
     {
         this.player = player;
@@ -67,7 +80,7 @@ public class ThirdPersonCam : MonoBehaviour
 
     private void UpdateCam()
     {
-        bool aiming = playerInputs != null && playerInputs.isAiming;
+        bool aiming = playerInputs.LatestInput.AimHeld;
         if (aiming != _wasAiming)
         {
             if (aiming)

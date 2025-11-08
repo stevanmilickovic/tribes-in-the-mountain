@@ -21,8 +21,7 @@ public class PlayerHealth : NetworkBehaviour
     public Transform visualsRoot;
 
     private Rigidbody _rb => GetComponent<Rigidbody>();
-    private PlayerMovement _movement => GetComponent<PlayerMovement>();
-    private PlayerRotate _rotate => GetComponent<PlayerRotate>();
+    private PlayerMotor _motor => GetComponent<PlayerMotor>();
     private PlayerTeam _team => GetComponent<PlayerTeam>();
 
     private MatchController MatchController => MatchController.Instance;
@@ -149,8 +148,7 @@ public class PlayerHealth : NetworkBehaviour
 
     private void ApplyAliveLocally(bool alive)
     {
-        if (_movement) _movement.enabled = alive;
-        if (_rotate) _rotate.enabled = alive;
+        if (_motor) _motor.enabled = alive;
         SetRenderersEnabled(visualsRoot, alive);
     }
 

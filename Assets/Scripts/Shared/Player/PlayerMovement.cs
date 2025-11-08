@@ -1,142 +1,113 @@
 using UnityEngine;
-using FishNet.Object;
+using FishNet.Object.Prediction;
 
-public class PlayerMovement : NetworkBehaviour
+public class PlayerMovement
 {
-    [Header("Movement")]
-    public float moveSpeed;
-    public float groundDrag;
+    public float moveSpeed = 6f;
+    public float airMultiplier = 0.6f;
+    public float rotationSpeed = 12f;
+    public float aimingRotationSpeed = 20f;
+    public float jumpForce = 1.5f;
+    public float groundDrag = 4f;
+    public float playerHeight = 1.8f;
+    public uint jumpCooldownTicks = 5;
 
-    [Header("Jumping")]
-    public float jumpForce;
-    public float jumpCooldown;
-    public float airMultiplier;
-    bool readyToJump;
-
-    [Header("Ground Check")]
-    public float playerHeight;
-    public LayerMask whatIsGround;
-    bool grounded;
-
-    public PlayerInputs input;
-    public PlayerHealth health;
-
-    Vector3 moveDirection;
-    Rigidbody rb;
-
-    public PlayerAnimState animState;
-
-    private bool isCrouching;
-    private bool isProne;
-
-    private bool _lastCrouchPulse;
-    private bool _lastPronePulse;
-
-    public override void OnStartServer()
+    public void SimulateStance(InputData rd, ref bool isCrouching, ref bool isProne)
     {
-        rb = ServerNetworkPrefabsUtil.setGameObjectRigidbody(gameObject);
-        enabled = true;
-        readyToJump = true;
-    }
-
-    public override void OnStartClient()
-    {
-        if (!IsServerInitialized)
+        if (rd.CrouchPressedEdge)
         {
-            rb = ClientNetworkPrefabsUtil.setGameObjectRigidbody(gameObject);
-            enabled = false;
+            isCrouching = !isCrouching;
+            if (isCrouching) isProne = false;
+        }
+        if (rd.PronePressedEdge)
+        {
+            isProne = !isProne;
+            if (isProne) isCrouching = false;
         }
     }
 
-    private void Update()
+    public void SimulateGroundCheck(ref bool grounded, Rigidbody body, LayerMask groundMask)
     {
-        animState.IsAiming.Value = (input != null && input.isAiming);
+        var origin = body.position + Vector3.up * 0.05f;
+        grounded = Physics.Raycast(origin, Vector3.down, playerHeight * 0.5f + 0.3f, groundMask, QueryTriggerInteraction.Ignore);
     }
 
-    private void FixedUpdate()
+    public void SimulateMove(InputData rd, PredictionRigidbody body, bool grounded, bool isCrouching, bool isProne)
     {
-        if (health != null && !health.IsAlive) return;
-
-        grounded = Physics.Raycast(transform.position, Vector3.down, playerHeight * 0.5f + 0.3f, whatIsGround);
-
-        MovePlayer();
-
-        SpeedControl();
-
-        rb.drag = grounded ? groundDrag : 0f;
-
-        if (input != null && input.jump && readyToJump && grounded)
-        {
-            readyToJump = false;
-            Jump();
-            Invoke(nameof(ResetJump), jumpCooldown);
-        }
-    }
-
-    private void MovePlayer()
-    {
-        if (input == null || rb == null) return;
-
-        float yaw = input.lookYawDeg;
+        float yaw = rd.Yaw;
         Quaternion basis = Quaternion.Euler(0f, yaw, 0f);
         Vector3 fwd = basis * Vector3.forward;
         Vector3 right = basis * Vector3.right;
-
-        Vector2 m = input.move;
-        moveDirection = fwd * m.y + right * m.x;
+        Vector2 move = rd.Move;
+        Vector3 moveDir = fwd * move.y + right * move.x;
 
         float speedMultiplier = 1f;
         if (isCrouching)
-        {
             speedMultiplier = 0f;
-        }
-        
-        if (isProne)
-        {
+        else if (isProne)
             speedMultiplier = 0.3f;
-        }
+
+        Vector3 force = moveDir.normalized * moveSpeed * 10f * speedMultiplier;
 
         if (grounded)
-            rb.AddForce(moveDirection.normalized * moveSpeed * 10f * speedMultiplier, ForceMode.Force);
+            body.AddForce(force, ForceMode.Force);
         else
-            rb.AddForce(moveDirection.normalized * moveSpeed * 10f * airMultiplier * speedMultiplier, ForceMode.Force);
+            body.AddForce(force * airMultiplier, ForceMode.Force);
     }
 
-    private void SpeedControl()
+    public void SimulateRotation(InputData rd, PredictionRigidbody body, float tickDelta)
     {
-        Vector3 flatVel = new Vector3(rb.velocity.x, 0f, rb.velocity.z);
-        if (flatVel.magnitude > moveSpeed)
+        if (rd.AimHeld)
         {
-            Vector3 limitedVel = flatVel.normalized * moveSpeed;
-            rb.velocity = new Vector3(limitedVel.x, rb.velocity.y, limitedVel.z);
+            var target = Quaternion.Euler(0f, rd.Yaw, 0f);
+            var spd = Mathf.Max(rotationSpeed, aimingRotationSpeed);
+            var newRot = Quaternion.Slerp(body.Rigidbody.rotation, target, spd * tickDelta);
+            body.Rigidbody.MoveRotation(newRot);
+            return;
         }
+
+        var basis = Quaternion.Euler(0f, rd.Yaw, 0f);
+        var fwd = basis * Vector3.forward;
+        var right = basis * Vector3.right;
+        var inputDir = (fwd * rd.Move.y + right * rd.Move.x);
+        if (inputDir.sqrMagnitude <= 0.0001f) return;
+
+        var tgt = Quaternion.LookRotation(inputDir.normalized, Vector3.up);
+        var rot = Quaternion.Slerp(body.Rigidbody.rotation, tgt, rotationSpeed * tickDelta);
+        body.Rigidbody.MoveRotation(rot);
     }
 
-    private void Jump()
+    public void SimulateJump(InputData rd, PredictionRigidbody body, bool grounded, ref uint nextAllowedJumpTick, uint currentTick)
     {
-        rb.velocity = new Vector3(rb.velocity.x, 0f, rb.velocity.z);
-        rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
-    }
-    private void ResetJump() => readyToJump = true;
+        if (!rd.JumpHeld) return;
+        if (!grounded) return;
+        if (currentTick < nextAllowedJumpTick) return;
 
-    public void ServerToggleCrouch()
-    {
-        isCrouching = !isCrouching;
-        if (isCrouching) isProne = false;
-        if (animState != null)
-        {
-            animState.IsCrouching.Value = isCrouching;
-            animState.IsProne.Value = isProne;
-        }
+        Vector3 vel = body.Rigidbody.velocity;
+        vel.y = 0f;
+        body.Rigidbody.velocity = vel;
+        body.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
+
+        nextAllowedJumpTick = currentTick + jumpCooldownTicks;
     }
-    public void ServerToggleProne()
+
+    public void ApplyDrag(PredictionRigidbody body, bool grounded, float tickDelta)
     {
-        isProne = !isProne;
-        if (isProne) isCrouching = false;
-        if (animState != null)
+        if (!grounded) return;
+        Vector3 v = body.Rigidbody.velocity;
+        v.x *= 1f / (1f + groundDrag * tickDelta);
+        v.z *= 1f / (1f + groundDrag * tickDelta);
+        body.Rigidbody.velocity = v;
+    }
+
+    public void ClampSpeed(PredictionRigidbody body)
+    {
+        Vector3 v = body.Rigidbody.velocity;
+        Vector3 flat = new Vector3(v.x, 0f, v.z);
+        if (flat.magnitude > moveSpeed)
         {
-            animState.IsCrouching.Value = isCrouching;
-            animState.IsProne.Value = isProne;
+            Vector3 limited = flat.normalized * moveSpeed;
+            body.Rigidbody.velocity = new Vector3(limited.x, v.y, limited.z);
         }
     }
 }
