@@ -9,7 +9,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 271099231719261030}
-  - component: {fileID: 5604002607820323691}
+  - component: {fileID: 9079896239472359079}
   m_Layer: 11
   m_Name: PlayerObj
   m_TagString: Untagged
@@ -33,29 +33,20 @@ Transform:
   - {fileID: 8210716099157072130}
   m_Father: {fileID: 721128818354707098}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!136 &5604002607820323691
-CapsuleCollider:
+--- !u!114 &9079896239472359079
+MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 659774177299608517}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 2
-  m_Radius: 0.5
-  m_Height: 2
-  m_Direction: 1
-  m_Center: {x: 0, y: 0, z: 0}
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4abfba8b3e4959c469364bd9e73668a2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  target: {fileID: 721128818354707098}
+  followSpeed: 20
 --- !u!1 &1715684365727957010
 GameObject:
   m_ObjectHideFlags: 0
@@ -66,6 +57,7 @@ GameObject:
   m_Component:
   - component: {fileID: 721128818354707098}
   - component: {fileID: 205137303601787795}
+  - component: {fileID: 4583066612536425120}
   - component: {fileID: 7161943386019570500}
   - component: {fileID: -3263947119899552499}
   - component: {fileID: 431268789512667861}
@@ -74,6 +66,7 @@ GameObject:
   - component: {fileID: -884552524095050793}
   - component: {fileID: 2872090865942907698}
   - component: {fileID: 5153675513797899763}
+  - component: {fileID: 3661411025921208178}
   m_Layer: 11
   m_Name: Player
   m_TagString: Untagged
@@ -125,6 +118,29 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 112
   m_CollisionDetection: 1
+--- !u!136 &4583066612536425120
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1715684365727957010}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 0.5
+  m_Height: 2
+  m_Direction: 1
+  m_Center: {x: 0, y: 0, z: 0}
 --- !u!114 &7161943386019570500
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -209,6 +225,8 @@ MonoBehaviour:
   - {fileID: -884552524095050793}
   - {fileID: 2872090865942907698}
   - {fileID: 5153675513797899763}
+  - {fileID: 3661411025921208178}
+  - {fileID: 0}
   InitializedParentNetworkBehaviour: {fileID: 0}
   InitializedNestedNetworkObjects: []
   RuntimeParentNetworkBehaviour: {fileID: 0}
@@ -225,11 +243,11 @@ MonoBehaviour:
   _graphicalObject: {fileID: 0}
   _detachGraphicalObject: 0
   _enableStateForwarding: 0
-  _networkTransform: {fileID: 0}
+  _networkTransform: {fileID: 1790398302540687137}
   _ownerInterpolation: 1
-  _ownerSmoothedProperties: 255
-  _adaptiveInterpolation: 3
-  _spectatorSmoothedProperties: 255
+  _ownerSmoothedProperties: 4294967295
+  _adaptiveInterpolation: 2
+  _spectatorSmoothedProperties: 4294967295
   _spectatorInterpolation: 2
   _enableTeleport: 0
   _teleportThreshold: 1
@@ -267,7 +285,7 @@ MonoBehaviour:
   _interpolation: 2
   _extrapolation: 0
   _enableTeleport: 1
-  _teleportThreshold: 500
+  _teleportThreshold: 5
   _clientAuthoritative: 0
   _sendToOwner: 1
   _interval: 1
@@ -341,6 +359,21 @@ MonoBehaviour:
   inputs: {fileID: 7161943386019570500}
   aimLayerIndex: 1
   aimBlendSpeed: 3
+--- !u!114 &3661411025921208178
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1715684365727957010}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 85ec6bde3034a7247bd64206810a50ba, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _componentIndexCache: 7
+  _addedNetworkObject: {fileID: 1294418109039712168}
+  _networkObjectCache: {fileID: 1294418109039712168}
 --- !u!1 &3735577750373151970
 GameObject:
   m_ObjectHideFlags: 0

@@ -26,7 +26,7 @@ public class PlayerInputs : NetworkBehaviour
     {
         var data = _bufferedInput;
         data.Yaw = LatestInput.Yaw;
-        _bufferedInput = default;
+        _bufferedInput = GetBufferedInputData(data);
         return data;
     }
 
@@ -74,5 +74,16 @@ public class PlayerInputs : NetworkBehaviour
 
         _prevFireHeldThisFrame = fireHeld;
 
+    }
+
+    private InputData GetBufferedInputData(InputData inputData)
+    {
+        return new InputData
+        {
+            Move = inputData.Move,
+            AimHeld = inputData.AimHeld,
+            Yaw = inputData.Yaw,
+            Pitch = inputData.Pitch
+        };
     }
 }

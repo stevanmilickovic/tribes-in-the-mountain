@@ -16,6 +16,10 @@ public class PlayerMotor : TickNetworkBehaviour
     public Transform Orientation;
 
     public readonly SyncVar<bool> IsAiming = new();
+    private bool _isAimingLocal;
+    public readonly SyncVar<bool> IsCrouchingNet = new();
+    public readonly SyncVar<bool> IsProneNet = new();
+    public readonly SyncVar<float> SpeedNet = new();
 
     private PredictionRigidbody _pred;
     private bool _isCrouching;
@@ -81,7 +85,17 @@ public class PlayerMotor : TickNetworkBehaviour
     [Replicate]
     private void PerformReplicate(InputData rd, ReplicateState state = ReplicateState.Invalid, Channel channel = Channel.Unreliable)
     {
-        IsAiming.Value = rd.AimHeld;
+        _isAimingLocal = rd.AimHeld;
+        if (IsServerInitialized && IsAiming.Value != rd.AimHeld)
+            IsAiming.Value = rd.AimHeld;
+        if (IsServerInitialized)
+        {
+            IsCrouchingNet.Value = _isCrouching;
+            IsProneNet.Value = _isProne;
+            SpeedNet.Value = _pred.Rigidbody.velocity.magnitude;
+        }
+
+
         movement.SimulateStance(rd, ref _isCrouching, ref _isProne);
         movement.SimulateGroundCheck(ref _grounded, _pred.Rigidbody, groundMask);
         movement.SimulateMove(rd, _pred, _grounded, _isCrouching, _isProne);

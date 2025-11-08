@@ -20,15 +20,15 @@ public class PlayerAnimationDriver : NetworkBehaviour
         if (anim == null || motor == null) return;
 
         bool aiming = motor.IsAiming.Value;
-        float speed = motor.PredictedVelocity.magnitude;
+        float speed = motor.IsOwner ? motor.PredictedVelocity.magnitude : motor.SpeedNet.Value;
 
         anim.SetBool("CombatMode", aiming);
         if (aiming && !_wasAiming)
             anim.SetTrigger("Combat");
 
-        anim.SetBool("Prone", motor.IsProne);
-        anim.SetBool("Crouch", motor.IsCrouching);
-        anim.SetBool("Stand", !motor.IsCrouching && !motor.IsProne);
+        anim.SetBool("Prone", motor.IsProneNet.Value);
+        anim.SetBool("Crouch", motor.IsCrouchingNet.Value);
+        anim.SetBool("Stand", !motor.IsCrouchingNet.Value && !motor.IsProneNet.Value);
 
         if (aiming || motor.IsCrouching || speed < 0.01f)
             anim.SetFloat("Speed", 0f);
