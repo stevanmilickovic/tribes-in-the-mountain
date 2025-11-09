@@ -55,25 +55,39 @@ public class PlayerMovement
             body.AddForce(force * airMultiplier, ForceMode.Force);
     }
 
-    public void SimulateRotation(InputData rd, PredictionRigidbody body, float tickDelta)
+    public void SimulateRotation(InputData rd, PredictionRigidbody body, float tickDelta, Transform aimTarget = null)
     {
         if (rd.AimHeld)
         {
-            var target = Quaternion.Euler(0f, rd.Yaw, 0f);
-            var spd = Mathf.Max(rotationSpeed, aimingRotationSpeed);
-            var newRot = Quaternion.Slerp(body.Rigidbody.rotation, target, spd * tickDelta);
+            Quaternion targetRot;
+            if (aimTarget != null)
+            {
+                Vector3 dir = aimTarget.position - body.Rigidbody.position;
+                dir.y = 0f;
+                if (dir.sqrMagnitude > 0.001f)
+                    targetRot = Quaternion.LookRotation(dir.normalized, Vector3.up);
+                else
+                    targetRot = body.Rigidbody.rotation;
+            }
+            else
+            {
+                targetRot = Quaternion.Euler(0f, rd.Yaw, 0f);
+            }
+
+            float spd = Mathf.Max(rotationSpeed, aimingRotationSpeed);
+            Quaternion newRot = Quaternion.Slerp(body.Rigidbody.rotation, targetRot, spd * tickDelta);
             body.Rigidbody.MoveRotation(newRot);
             return;
         }
 
-        var basis = Quaternion.Euler(0f, rd.Yaw, 0f);
-        var fwd = basis * Vector3.forward;
-        var right = basis * Vector3.right;
-        var inputDir = (fwd * rd.Move.y + right * rd.Move.x);
+        Quaternion basis = Quaternion.Euler(0f, rd.Yaw, 0f);
+        Vector3 fwd = basis * Vector3.forward;
+        Vector3 right = basis * Vector3.right;
+        Vector3 inputDir = (fwd * rd.Move.y + right * rd.Move.x);
         if (inputDir.sqrMagnitude <= 0.0001f) return;
 
-        var tgt = Quaternion.LookRotation(inputDir.normalized, Vector3.up);
-        var rot = Quaternion.Slerp(body.Rigidbody.rotation, tgt, rotationSpeed * tickDelta);
+        Quaternion tgt = Quaternion.LookRotation(inputDir.normalized, Vector3.up);
+        Quaternion rot = Quaternion.Slerp(body.Rigidbody.rotation, tgt, rotationSpeed * tickDelta);
         body.Rigidbody.MoveRotation(rot);
     }
 

@@ -6,8 +6,10 @@ public class CameraBinder : NetworkBehaviour
 {
     [Header("References inside Player Prefab")]
     public PlayerInputs playerInputs;
+    public PlayerMotor playerMotor;
     public Transform orientation;
     public Transform playerObj;
+    public Transform targetObj;
 
     public override void OnStartClient()
     {
@@ -34,5 +36,13 @@ public class CameraBinder : NetworkBehaviour
             playerInputs.cameraRig = cam;
 
         Debug.Log("PlayerCameraBinder: Successfully bound local camera rig to player prefab.");
+
+        AimTargetController atc = mainCam.GetComponent<AimTargetController>();
+
+        if (atc != null)
+        {
+            atc.playerMotor = playerMotor;
+            atc.target = targetObj;
+        }
     }
 }

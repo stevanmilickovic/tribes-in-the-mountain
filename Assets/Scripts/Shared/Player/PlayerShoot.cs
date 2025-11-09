@@ -12,9 +12,9 @@ public class PlayerShoot
 
     public void ProcessFire(InputData rd, ref bool isReloading, ref uint nextAllowedFireTick, uint currentTick, PlayerMotor motor, PredictionRigidbody body)
     {
-        if (isReloading) return;
+        //if (isReloading) return;
         if (!rd.FirePressedEdge) return;
-        if (currentTick < nextAllowedFireTick) return;
+        //if (currentTick < nextAllowedFireTick) return;
 
         nextAllowedFireTick = currentTick + fireCooldownTicks;
         isReloading = true;
@@ -26,11 +26,13 @@ public class PlayerShoot
         if (motor.Health != null && !motor.Health.IsAlive) return;
         if (motor.Orientation == null) return;
 
-        Vector3 origin = motor.Orientation.position;
-        Vector3 dir = motor.Orientation.forward;
+        Vector3 origin = motor.aimGun.aimTransform.position;
+        Vector3 dir = (motor.aimGun.targetPosition - origin).normalized;
 
+        Debug.DrawRay(origin, dir * maxRange, Color.red, 1f);
         if (Physics.Raycast(origin, dir, out RaycastHit hit, maxRange, ~0, QueryTriggerInteraction.Ignore))
         {
+            Debug.Log($"Hit {hit.collider.name}");
             if (hit.collider.transform.root != motor.transform.root)
             {
                 var targetHealth = hit.collider.GetComponentInParent<PlayerHealth>();

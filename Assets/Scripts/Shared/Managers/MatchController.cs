@@ -253,7 +253,6 @@ public class MatchController : NetworkSingleton<MatchController>
         pt.transform.SetPositionAndRotation(pos, rot);
         pt.GetComponent<Rigidbody>().velocity = Vector3.zero;
         pt.GetComponent<Rigidbody>().angularVelocity = Vector3.zero;
-        pt.GetComponent<NetworkTransform>().Teleport();
     }
 
 

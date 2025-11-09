@@ -106,11 +106,9 @@ public class PlayerHealth : NetworkBehaviour
 
     private void ServerSnapTo(Vector3 pos, Quaternion rot)
     {
-        var nt = GetComponent<NetworkTransform>();
         transform.SetPositionAndRotation(pos, rot);
         _rb.velocity = Vector3.zero; 
         _rb.angularVelocity = Vector3.zero;
-        nt.Teleport();
     }
 
     [TargetRpc]
