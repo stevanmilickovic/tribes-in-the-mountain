@@ -17,6 +17,18 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 90f3bcb560ecddd42b1dba6234db3ad2, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 2.5
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 90f3bcb560ecddd42b1dba6234db3ad2, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 2.5
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 90f3bcb560ecddd42b1dba6234db3ad2, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 2.5
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 90f3bcb560ecddd42b1dba6234db3ad2, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
       objectReference: {fileID: 0}
@@ -56,6 +68,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 90f3bcb560ecddd42b1dba6234db3ad2, type: 3}
+      propertyPath: m_ConstrainProportionsScale
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: -6796853784620764048, guid: 90f3bcb560ecddd42b1dba6234db3ad2, type: 3}
       propertyPath: m_Materials.Array.data[0]
       value: 
@@ -74,7 +90,7 @@ PrefabInstance:
       objectReference: {fileID: 2100000, guid: 62f82c6bf6d10f7479cf6be0b04b0fd5, type: 2}
     - target: {fileID: 919132149155446097, guid: 90f3bcb560ecddd42b1dba6234db3ad2, type: 3}
       propertyPath: m_Name
-      value: Spruce_1
+      value: Tree 1
       objectReference: {fileID: 0}
     - target: {fileID: 1226244934252201412, guid: 90f3bcb560ecddd42b1dba6234db3ad2, type: 3}
       propertyPath: m_Materials.Array.data[0]

@@ -21,7 +21,6 @@ public class PlayerMotor : TickNetworkBehaviour
     public AimGun aimGun;
 
     public readonly SyncVar<bool> IsAiming = new();
-    private bool _isAimingLocal;
     public readonly SyncVar<Quaternion> RotationNet = new();
     private float _nextRotSend;
 
@@ -37,7 +36,7 @@ public class PlayerMotor : TickNetworkBehaviour
     private uint _nextAllowedFireTick;
     private uint _nextAllowedJumpTick;
 
-    Vector3 _netTargetPos, _netTargetVel;
+    Vector3 _netTargetPos;
 
     private struct StateData : IReconcileData
     {
@@ -85,26 +84,18 @@ public class PlayerMotor : TickNetworkBehaviour
         if (!IsOwner && !IsServerInitialized)
         {
             rb.position = Vector3.Lerp(rb.position, _netTargetPos, 20f * Time.deltaTime);
-            //rb.velocity = _netTargetVel;
         }
     }
 
     public override void OnStartNetwork()
     {
-        if (rb == null) rb = GetComponent<Rigidbody>();
+        if (rb == null)
+        {
+            rb = GetComponent<Rigidbody>();
+        }
+
         _pred.Initialize(rb);
         SetTickCallbacks(TickCallback.Tick | TickCallback.PostTick);
-
-        //if (!Owner.IsLocalClient)
-        //{
-        //    Debug.Log("Configuring NetworkTransform for remote player.");
-        //    // Create and configure a NetworkTransform for remote players
-        //    var netTransform = gameObject.GetComponent<NetworkTransform>();
-        //    netTransform.SetSendToOwner(true);
-        //    netTransform.SetSynchronizePosition(true);
-        //    netTransform.SetSynchronizeRotation(false);
-        //    netTransform.SetSynchronizeScale(false);
-        //}
 
         if (!IsServerInitialized && !Owner.IsLocalClient)
         {
@@ -115,19 +106,23 @@ public class PlayerMotor : TickNetworkBehaviour
 
     protected override void TimeManager_OnTick()
     {
-        if (health != null && !health.IsAlive) return;
-        var input = inputs != null ? inputs.ConsumeForTick() : default;
+        if (health != null && !health.IsAlive)
+        {
+            return;
+        }
+
+        var input = inputs.ConsumeForTick();
         PerformReplicate(input);
 
         if (IsServerInitialized)
+        {
             CreateReconcile();
+        }
+            
     }
 
     public override void CreateReconcile()
     {
-        if (!IsServerInitialized)
-            return;
-
         var sd = new StateData
         {
             Position = rb.position,
@@ -139,22 +134,22 @@ public class PlayerMotor : TickNetworkBehaviour
             NextAllowedFireTick = _nextAllowedFireTick,
             NextAllowedJumpTick = _nextAllowedJumpTick
         };
+
         PerformReconcile(sd);
     }
 
     [Replicate]
     private void PerformReplicate(InputData rd, ReplicateState state = ReplicateState.Invalid, Channel channel = Channel.Unreliable)
     {
-        _isAimingLocal = rd.AimHeld;
-        if (IsServerInitialized && IsAiming.Value != rd.AimHeld)
-        {
-            IsAiming.Value = rd.AimHeld;
-        }
         if (IsServerInitialized)
         {
             IsCrouchingNet.Value = _isCrouching;
             IsProneNet.Value = _isProne;
             SpeedNet.Value = _pred.Rigidbody.velocity.magnitude;
+            if (IsAiming.Value != rd.AimHeld)
+            {
+                IsAiming.Value = rd.AimHeld;
+            }
         }
 
         movement.SimulateStance(rd, ref _isCrouching, ref _isProne);
@@ -167,12 +162,10 @@ public class PlayerMotor : TickNetworkBehaviour
 
         _pred.Simulate();
 
-        //if (IsServerInitialized)
-        //    RpcBroadcastPosition(rb.position.x, rb.position.y, rb.position.z,
-        //                         rb.velocity.x, rb.velocity.y, rb.velocity.z);
-
         if (IsServerInitialized)
-            BroadcastPoseToObservers(rb.position, rb.velocity);
+        {
+            BroadcastPoseToObservers(rb.position);
+        }
     }
 
     [Reconcile]
@@ -212,27 +205,17 @@ public class PlayerMotor : TickNetworkBehaviour
     }
 
     [Server]
-    void BroadcastPoseToObservers(Vector3 pos, Vector3 vel)
+    void BroadcastPoseToObservers(Vector3 pos)
     {
         foreach (var c in Observers)
-            if (c != Owner) TargetRecvPose(c, pos.x, pos.y, pos.z, vel.x, vel.y, vel.z);
+            if (c != Owner) TargetRecvPose(c, pos.x, pos.y, pos.z);
     }
 
-    [TargetRpc]  // ILPP-safe vs ObserversRpc in your build
-    void TargetRecvPose(NetworkConnection _, float px, float py, float pz, float vx, float vy, float vz)
+    [TargetRpc]
+    void TargetRecvPose(NetworkConnection _, float px, float py, float pz)
     {
         _netTargetPos = new Vector3(px, py, pz);
-        _netTargetVel = new Vector3(vx, vy, vz);
     }
-
-    //[ObserversRpc]
-    //private void RpcBroadcastPosition(float px, float py, float pz,
-    //                              float vx, float vy, float vz)
-    //{
-    //    if (IsOwner) return;
-    //    rb.position = new Vector3(px, py, pz);
-    //    rb.velocity = new Vector3(vx, vy, vz);
-    //}
 
 
     public bool IsGrounded => _grounded;
