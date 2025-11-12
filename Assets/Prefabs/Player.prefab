@@ -262,7 +262,7 @@ MonoBehaviour:
   - {fileID: 2872090865942907698}
   - {fileID: 5153675513797899763}
   - {fileID: 3661411025921208178}
-  - {fileID: 0}
+  - {fileID: 7038535661973972034}
   InitializedParentNetworkBehaviour: {fileID: 0}
   InitializedNestedNetworkObjects: []
   RuntimeParentNetworkBehaviour: {fileID: 0}
@@ -376,6 +376,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 265053de34c627243bcf643f453e13ea, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _componentIndexCache: 7
+  _addedNetworkObject: {fileID: 1294418109039712168}
+  _networkObjectCache: {fileID: 1294418109039712168}
   aimTransform: {fileID: 4201167128427922440}
   bone: {fileID: 2093418362254337875}
   targetPosition: {x: 0, y: 0, z: 0}
@@ -383,6 +386,7 @@ MonoBehaviour:
   iterations: 10
   weight: 1
   DoGunAim: 0
+  aimResponseSpeed: 1
 --- !u!1 &3735577750373151970
 GameObject:
   m_ObjectHideFlags: 0

@@ -14,7 +14,7 @@ OcclusionCullingSettings:
 RenderSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 9
-  m_Fog: 1
+  m_Fog: 0
   m_FogColor: {r: 0.29659134, g: 0.36227924, b: 0.4056604, a: 1}
   m_FogMode: 3
   m_FogDensity: 0.006
@@ -2804,7 +2804,7 @@ MonoBehaviour:
   playerMotor: {fileID: 0}
   target: {fileID: 0}
   maxDistance: 50
-  minDistance: 2
+  minDistance: 5
   hitMask:
     serializedVersion: 2
     m_Bits: 4294967295

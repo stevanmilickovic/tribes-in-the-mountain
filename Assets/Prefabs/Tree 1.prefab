@@ -108,6 +108,26 @@ PrefabInstance:
       propertyPath: m_Materials.Array.data[0]
       value: 
       objectReference: {fileID: 2100000, guid: 7f6851abef6800b4db7dee7b8f1eff14, type: 2}
+    - target: {fileID: 4742473837712756890, guid: 90f3bcb560ecddd42b1dba6234db3ad2, type: 3}
+      propertyPath: m_FadeMode
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4742473837712756890, guid: 90f3bcb560ecddd42b1dba6234db3ad2, type: 3}
+      propertyPath: m_LODs.Array.data[0].screenRelativeHeight
+      value: 0.42134416
+      objectReference: {fileID: 0}
+    - target: {fileID: 4742473837712756890, guid: 90f3bcb560ecddd42b1dba6234db3ad2, type: 3}
+      propertyPath: m_LODs.Array.data[1].screenRelativeHeight
+      value: 0.3907499
+      objectReference: {fileID: 0}
+    - target: {fileID: 4742473837712756890, guid: 90f3bcb560ecddd42b1dba6234db3ad2, type: 3}
+      propertyPath: m_LODs.Array.data[2].screenRelativeHeight
+      value: 0.15938392
+      objectReference: {fileID: 0}
+    - target: {fileID: 4742473837712756890, guid: 90f3bcb560ecddd42b1dba6234db3ad2, type: 3}
+      propertyPath: m_LODs.Array.data[3].screenRelativeHeight
+      value: 0.15938392
+      objectReference: {fileID: 0}
     - target: {fileID: 4999701950904739414, guid: 90f3bcb560ecddd42b1dba6234db3ad2, type: 3}
       propertyPath: m_Materials.Array.data[0]
       value: 
