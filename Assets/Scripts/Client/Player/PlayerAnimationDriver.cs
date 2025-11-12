@@ -22,6 +22,8 @@ public class PlayerAnimationDriver : NetworkBehaviour
         bool aiming = motor.IsAiming.Value;
         float speed = motor.IsOwner ? motor.PredictedVelocity.magnitude : motor.SpeedNet.Value;
 
+        HandleAudio(speed);
+
         anim.SetBool("CombatMode", aiming);
         if (aiming && !_wasAiming)
             anim.SetTrigger("Combat");
@@ -43,14 +45,30 @@ public class PlayerAnimationDriver : NetworkBehaviour
         _wasAiming = aiming;
     }
 
-    private float CalculateSpeedFromTransform()
+    private void HandleAudio(float speed)
     {
-        if (!_hasLast) { _lastPos = transform.position; _hasLast = true; return 0f; }
-        Vector3 cur = transform.position;
-        Vector3 delta = cur - _lastPos; delta.y = 0f;
-        _lastPos = cur;
-        float dt = Mathf.Max(Time.deltaTime, 0.0001f);
-        float s = delta.magnitude / dt;
-        return (s < 0.02f) ? 0f : s;
+        var audio = motor.GetComponent<PlayerAudio>();
+        if (audio == null) return;
+
+        bool grounded = motor.IsGrounded;
+        bool moving = speed > 0.1f;
+        bool prone = motor.IsProne;
+        bool crouch = motor.IsCrouching;
+
+        if (grounded && moving)
+        {
+            if (prone)
+                audio.PlayCrawlLoop();
+            else if (!crouch)
+                audio.PlayFootstepLoop();
+            else
+                audio.StopMovementLoop();
+        }
+        else
+        {
+            if (audio.source.isPlaying && (audio.source.clip == audio.footstep || audio.source.clip == audio.crawl))
+                audio.StopMovementLoop();
+        }
     }
+
 }

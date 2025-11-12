@@ -19,6 +19,8 @@ public class PlayerMotor : TickNetworkBehaviour
     public Transform Orientation;
     public Transform target;
     public AimGun aimGun;
+    public Transform muzzle;
+    public GameObject smokePrefab;
 
     public readonly SyncVar<bool> IsAiming = new();
     public readonly SyncVar<Quaternion> RotationNet = new();
@@ -153,6 +155,9 @@ public class PlayerMotor : TickNetworkBehaviour
         }
 
         movement.SimulateStance(rd, ref _isCrouching, ref _isProne);
+        if (rd.CrouchPressedEdge || rd.PronePressedEdge)
+            GetComponent<PlayerAudio>()?.PlayRuffle();
+
         movement.SimulateGroundCheck(ref _grounded, _pred.Rigidbody, groundMask);
         movement.SimulateMove(rd, _pred, _grounded, _isCrouching, _isProne);
         movement.SimulateJump(rd, _pred, _grounded, ref _nextAllowedJumpTick, TimeManager.LocalTick);
@@ -215,6 +220,24 @@ public class PlayerMotor : TickNetworkBehaviour
     void TargetRecvPose(NetworkConnection _, float px, float py, float pz)
     {
         _netTargetPos = new Vector3(px, py, pz);
+    }
+
+    [ObserversRpc(BufferLast = false)]
+    public void RpcOnFire()
+    {
+        var audio = GetComponent<PlayerAudio>();
+        if (audio != null)
+            audio.PlayShot();
+
+        if (smokePrefab != null && muzzle != null)
+        {
+            var smokeObj = Instantiate(smokePrefab, muzzle.position, muzzle.rotation);
+            var ps = smokeObj.GetComponentInChildren<ParticleSystem>();
+            if (ps != null)
+                ps.Play();
+
+            Destroy(smokeObj, ps.main.duration + ps.main.startLifetime.constantMax);
+        }
     }
 
 
