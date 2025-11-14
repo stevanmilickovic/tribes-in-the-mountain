@@ -26,10 +26,10 @@ public class PlayerShoot
         if (motor.Health != null && !motor.Health.IsAlive) return;
         if (motor.Orientation == null) return;
 
-        motor.RpcOnFire();
-
         Vector3 origin = motor.aimGun.aimTransform.position;
         Vector3 dir = (motor.aimGun.targetPosition - origin).normalized;
+
+        motor.RpcOnFire(dir);
 
         Debug.DrawRay(origin, dir * maxRange, Color.red, 1f);
         if (Physics.Raycast(origin, dir, out RaycastHit hit, maxRange, ~0, QueryTriggerInteraction.Ignore))

@@ -223,7 +223,7 @@ public class PlayerMotor : TickNetworkBehaviour
     }
 
     [ObserversRpc(BufferLast = false)]
-    public void RpcOnFire()
+    public void RpcOnFire(Vector3 dir)
     {
         var audio = GetComponent<PlayerAudio>();
         if (audio != null)
@@ -231,7 +231,10 @@ public class PlayerMotor : TickNetworkBehaviour
 
         if (smokePrefab != null && muzzle != null)
         {
-            var smokeObj = Instantiate(smokePrefab, muzzle.position, muzzle.rotation);
+            // Look in the same direction as the actual shot
+            var rot = Quaternion.LookRotation(dir, Vector3.up);
+
+            var smokeObj = Instantiate(smokePrefab, muzzle.position, rot);
             var ps = smokeObj.GetComponentInChildren<ParticleSystem>();
             if (ps != null)
                 ps.Play();

@@ -14,7 +14,7 @@ OcclusionCullingSettings:
 RenderSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 9
-  m_Fog: 1
+  m_Fog: 0
   m_FogColor: {r: 0.29659134, g: 0.36227924, b: 0.4056604, a: 1}
   m_FogMode: 3
   m_FogDensity: 0.006
@@ -2346,7 +2346,7 @@ MonoBehaviour:
   _componentIndexCache: 255
   _addedNetworkObject: {fileID: 780629072}
   _networkObjectCache: {fileID: 0}
-  radius: 5
+  radius: 10
   attackingTeam: 2
   captureRatePerSecond: 0.15
   decayPerSecond: 0.1
@@ -3384,7 +3384,8 @@ MonoBehaviour:
   _componentIndexCache: 255
   _addedNetworkObject: {fileID: 1296566438}
   _networkObjectCache: {fileID: 0}
-  playerPrefab: {fileID: 1715684365727957010, guid: ea2c0cfb1227e7e468312b9f03cfb552, type: 3}
+  teamAPlayerPrefab: {fileID: 1715684365727957010, guid: ea2c0cfb1227e7e468312b9f03cfb552, type: 3}
+  teamBPlayerPrefab: {fileID: 4499703010273450316, guid: 5967ed408007ef541b05f89e0803055c, type: 3}
 --- !u!4 &1296566440
 Transform:
   m_ObjectHideFlags: 0

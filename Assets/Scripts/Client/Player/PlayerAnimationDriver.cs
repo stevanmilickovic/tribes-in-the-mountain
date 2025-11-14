@@ -6,6 +6,7 @@ public class PlayerAnimationDriver : NetworkBehaviour
     public Animator anim;
     public PlayerMotor motor;
     public PlayerInputs inputs;
+    public PlayerHealth health;
 
     public int aimLayerIndex = 1;
     public float aimBlendSpeed = 3f;
@@ -14,10 +15,25 @@ public class PlayerAnimationDriver : NetworkBehaviour
     private bool _wasAiming;
     private Vector3 _lastPos;
     private bool _hasLast;
+    private bool wasDead;
 
     private void LateUpdate()
     {
         if (anim == null || motor == null) return;
+
+        if (!health.IsAlive)
+        {
+            wasDead = true;
+            anim.SetTrigger("Death");
+            return;
+        }
+
+        if (health.IsAlive && wasDead)
+        {
+            wasDead = false;
+            anim.SetBool("Death", false);
+            anim.SetTrigger("Reset");
+        }
 
         bool aiming = motor.IsAiming.Value;
         float speed = motor.IsOwner ? motor.PredictedVelocity.magnitude : motor.SpeedNet.Value;

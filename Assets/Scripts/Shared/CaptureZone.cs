@@ -31,6 +31,9 @@ public class CaptureZone : NetworkBehaviour
     {
         if (!IsServerInitialized) return;
 
+        if (match == null || match.State != MatchState.Live)
+            return;
+
         _accum += Time.deltaTime;
         if (_accum < 0.25f) return;
         _accum = 0f;
@@ -66,12 +69,12 @@ public class CaptureZone : NetworkBehaviour
         {
             teamOwner.Value = attackingTeam;
             match?.ServerOnZoneCaptured(attackingTeam);
+            progress.Value = 0f;
         }
     }
 
     public void ResetZone()
     {
-        if (!IsServerInitialized) return;
         progress.Value = 0f;
         teamOwner.Value = Team.None;
     }

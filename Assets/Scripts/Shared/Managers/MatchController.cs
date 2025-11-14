@@ -256,7 +256,7 @@ public class MatchController : NetworkSingleton<MatchController>
     }
 
 
-    [ObserversRpc(BufferLast = true)]
+    [ObserversRpc]
     private void Rpc_OnMatchEnded(Team winner)
     {
         // TODO: hook UI — show winner or draw.

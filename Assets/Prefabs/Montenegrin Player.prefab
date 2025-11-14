@@ -101,9 +101,8 @@ GameObject:
   - component: {fileID: 7038535661973972034}
   - component: {fileID: 7009812168602803100}
   - component: {fileID: 7577885679099483198}
-  - component: {fileID: -7445395595079267902}
   m_Layer: 11
-  m_Name: Player
+  m_Name: Montenegrin Player
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -294,7 +293,7 @@ MonoBehaviour:
   _teleportThreshold: 1
   <PrefabId>k__BackingField: 0
   <SpawnableCollectionId>k__BackingField: 0
-  <AssetPathHash>k__BackingField: 2092870565765373345
+  <AssetPathHash>k__BackingField: 7820530118875116611
   <SceneId>k__BackingField: 0
   SerializedTransformProperties:
     Position: {x: 1450.4628, y: 350.1, z: 1295.01}
@@ -352,6 +351,7 @@ MonoBehaviour:
   anim: {fileID: 2815451387539440504}
   motor: {fileID: -3263947119899552499}
   inputs: {fileID: 7161943386019570500}
+  health: {fileID: 2872090865942907698}
   aimLayerIndex: 1
   aimBlendSpeed: 3
 --- !u!114 &3661411025921208178
@@ -505,19 +505,6 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
---- !u!114 &-7445395595079267902
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1715684365727957010}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9f0a75222db162f4381405b246dcb735, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  ps: {fileID: 0}
 --- !u!1 &3735577750373151970
 GameObject:
   m_ObjectHideFlags: 0

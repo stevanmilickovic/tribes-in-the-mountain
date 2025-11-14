@@ -6,7 +6,8 @@ using FishNet.Connection;
 
 public class LobbySelectionGateway : NetworkSingleton<LobbySelectionGateway>
 {
-    [SerializeField] private GameObject playerPrefab;
+    [SerializeField] private GameObject teamAPlayerPrefab;
+    [SerializeField] private GameObject teamBPlayerPrefab;
 
     private readonly Dictionary<NetworkConnection, Team> _pending = new Dictionary<NetworkConnection, Team>();
 
@@ -48,12 +49,12 @@ public class LobbySelectionGateway : NetworkSingleton<LobbySelectionGateway>
     {
         if (!IsServerStarted) return;
         if (!_pending.TryGetValue(conn, out var team)) return;
-        if (playerPrefab == null) return;
 
         if (!match.ServerCanTeamSpawn(team)) return;
 
         Transform sp = match.GetSpawnForTeam(team);
 
+        GameObject playerPrefab = (team == Team.TeamA) ? teamAPlayerPrefab : teamBPlayerPrefab;
         GameObject go = (sp != null)
             ? Instantiate(playerPrefab, sp.position, sp.rotation)
             : Instantiate(playerPrefab);
