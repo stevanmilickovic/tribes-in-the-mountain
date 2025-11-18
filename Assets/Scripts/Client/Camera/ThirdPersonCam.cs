@@ -31,8 +31,8 @@ public class ThirdPersonCam : MonoBehaviour
     void Start()
     {
         //crosshair.SetActive(false);
-        //freeCam.Priority = activePriority;
-        //aimCam.Priority = inactivePriority;
+        freeCam.Priority = activePriority;
+        aimCam.Priority = inactivePriority;
 
         //aimCam.m_XAxis.Value = freeCam.m_XAxis.Value;
         //aimCam.m_YAxis.Value = freeCam.m_YAxis.Value;

@@ -26,6 +26,8 @@ public class MatchController : NetworkSingleton<MatchController>
     [SerializeField] private int startingReservesTeamA = 30;
     [SerializeField] private int startingReservesTeamB = 30;
 
+    HUDController hud;
+
     private readonly SyncVar<int> remainingSeconds = new();
     private readonly SyncVar<int> teamACount = new();
     private readonly SyncVar<int> teamBCount = new();
@@ -63,6 +65,8 @@ public class MatchController : NetworkSingleton<MatchController>
 
         aliveA.Value = 0;
         aliveB.Value = 0;
+
+        hud = FindFirstObjectByType<HUDController>();
     }
 
     private void Update()
@@ -217,6 +221,9 @@ public class MatchController : NetworkSingleton<MatchController>
 
     private void StartNewRound()
     {
+        if (hud != null)
+            hud.HideVictory();
+
         state.Value = MatchState.Live;
         remainingSeconds.Value = Mathf.Max(1, roundSeconds);
         reservesA.Value = Mathf.Max(0, startingReservesTeamA);
@@ -259,6 +266,7 @@ public class MatchController : NetworkSingleton<MatchController>
     [ObserversRpc]
     private void Rpc_OnMatchEnded(Team winner)
     {
-        // TODO: hook UI — show winner or draw.
+        if (hud != null)
+            hud.ShowVictory(winner);
     }
 }

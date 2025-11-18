@@ -47,6 +47,9 @@ public class PlayerMovement
         else if (isProne)
             speedMultiplier = 0.3f;
 
+        if (rd.AimHeld)
+            speedMultiplier *= 0.2f;
+
         Vector3 force = moveDir.normalized * moveSpeed * 10f * speedMultiplier;
 
         if (grounded)
