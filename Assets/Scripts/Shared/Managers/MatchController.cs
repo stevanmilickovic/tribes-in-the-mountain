@@ -31,7 +31,7 @@ public class MatchController : NetworkSingleton<MatchController>
     [SerializeField] private GameObject montenegrinCorpsePrefab;
     [SerializeField] private GameObject ottomanCorpsePrefab;
 
-    HUDController hud;
+    public HUDController hud;
 
     private readonly SyncVar<int> remainingSeconds = new();
     private readonly SyncVar<int> teamACount = new();
@@ -72,8 +72,6 @@ public class MatchController : NetworkSingleton<MatchController>
 
         aliveA.Value = 0;
         aliveB.Value = 0;
-
-        hud = FindFirstObjectByType<HUDController>();
     }
 
     private void Update()
@@ -256,7 +254,7 @@ public class MatchController : NetworkSingleton<MatchController>
             ph.ServerForceAlive(true);
             ph.ServerRestoreFull();
 
-            ServerSnapTo(pt, pos, rot);
+            pt.GetComponent<PlayerMotor>().Teleport(pos, rot);
 
             ServerOnPlayerSpawned(pt, consumeReserve: false);
         }
@@ -265,13 +263,6 @@ public class MatchController : NetworkSingleton<MatchController>
         {
             captureZone.ResetZone();
         }
-    }
-
-    private void ServerSnapTo(PlayerTeam pt, Vector3 pos, Quaternion rot)
-    {
-        pt.transform.SetPositionAndRotation(pos, rot);
-        pt.GetComponent<Rigidbody>().velocity = Vector3.zero;
-        pt.GetComponent<Rigidbody>().angularVelocity = Vector3.zero;
     }
 
     public void ServerOnPlayerDisconnected(PlayerTeam pt)

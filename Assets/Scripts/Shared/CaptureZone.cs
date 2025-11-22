@@ -14,6 +14,11 @@ public class CaptureZone : NetworkBehaviour
     [Header("Sync Vars (read-only on clients)")]
     private readonly SyncVar<Team> teamOwner = new();
     private readonly SyncVar<float> progress = new();
+    private readonly SyncVar<int> attackersCount = new();
+
+    public float Progress => progress.Value;
+    public Team Owner => teamOwner.Value;
+    public int Attackers => attackersCount.Value;
 
     private readonly Collider[] _buffer = new Collider[16];
     private float _accum;
@@ -56,6 +61,7 @@ public class CaptureZone : NetworkBehaviour
             else
                 defenders++;
         }
+        attackersCount.Value = attackers;
 
         float delta = 0f;
         if (attackers > defenders)

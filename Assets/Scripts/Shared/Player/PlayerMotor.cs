@@ -272,21 +272,20 @@ public class PlayerMotor : TickNetworkBehaviour
         if (rb == null)
             rb = GetComponent<Rigidbody>();
 
-        // SERVER HARD SNAP
         rb.position = pos;
         rb.rotation = rot;
         rb.velocity = Vector3.zero;
         rb.angularVelocity = Vector3.zero;
 
-        // prevent pose broadcast for next tick
-        _justTeleported = true;
-        _skipBroadcastTicks = 2;   // NEW FIELD (see Patch 3)
+        _isReloading = false;
+        _hasAmmo = true;
 
-        // reset server + client prediction caches
+        _justTeleported = true;
+        _skipBroadcastTicks = 2;
+
         ClearReplicateCache();
         RpcClearPredictionCache();
 
-        // Tell all observers to instantly snap
         RpcTeleport(pos, rot);
     }
 
@@ -294,7 +293,6 @@ public class PlayerMotor : TickNetworkBehaviour
     [ObserversRpc(BufferLast = false)]
     private void RpcTeleport(Vector3 pos, Quaternion rot)
     {
-        // Hard snap on ALL non-owners.
         if (IsOwner) return;
 
         rb.position = pos;
@@ -302,7 +300,6 @@ public class PlayerMotor : TickNetworkBehaviour
         rb.velocity = Vector3.zero;
         rb.angularVelocity = Vector3.zero;
 
-        // Also fix interpolation target
         _netTargetPos = pos;
 
         ClearReplicateCache();
