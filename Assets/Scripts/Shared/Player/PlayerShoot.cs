@@ -6,21 +6,32 @@ public class PlayerShoot
 {
     public int damage = 100;
     public float maxRange = 150f;
-    public float reloadSeconds = 6f;
+    public float reloadSeconds = 4.5f;
     public uint fireCooldownTicks = 3;
     public bool allowFriendlyFire = false;
 
-    public void ProcessFire(InputData rd, ref bool isReloading, ref uint nextAllowedFireTick, uint currentTick, PlayerMotor motor, PredictionRigidbody body)
+    public void ProcessFire(InputData rd, ref bool isReloading, ref uint nextAllowedFireTick, uint currentTick, PlayerMotor motor, PredictionRigidbody body, bool hasAmmo)
     {
-        //if (isReloading) return;
-        if (!rd.FirePressedEdge) return;
-        //if (currentTick < nextAllowedFireTick) return;
+        if (rd.ReloadPressed && !isReloading)
+        {
+            motor.SetReloading(true);
+            if (motor.IsServerInitialized)
+                motor.StartCoroutine(FinishReload(motor, reloadSeconds));
+            return;
+        }
+
+        if (isReloading)
+            return;
+
+        if (!hasAmmo)
+            return;
+
+        if (!rd.FirePressedEdge)
+            return;
+
+        motor.ConsumeAmmo();
 
         nextAllowedFireTick = currentTick + fireCooldownTicks;
-        isReloading = true;
-
-        if (motor.IsServerInitialized)
-            motor.StartCoroutine(FinishReload(motor, reloadSeconds));
 
         if (!motor.IsServerInitialized) return;
         if (motor.Health != null && !motor.Health.IsAlive) return;
@@ -52,6 +63,7 @@ public class PlayerShoot
         yield return new WaitForSeconds(wait);
         if (!motor.IsServerInitialized) yield break;
         motor.SetReloading(false);
+        motor.RestoreAmmo();
     }
 
     private bool SameTeamAs(PlayerTeam myTeam, PlayerHealth otherHealth)

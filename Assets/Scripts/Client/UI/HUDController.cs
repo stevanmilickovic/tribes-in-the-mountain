@@ -13,11 +13,21 @@ public class HUDController : MonoBehaviour
     [SerializeField] private GameObject tribesVictoryPanel;
     [SerializeField] private GameObject ottomansVictoryPanel;
     [SerializeField] private GameObject rootPanel;
+    [SerializeField] private GameObject reloadingText;
 
     private MatchController MatchController => MatchController.Instance;
 
+    private PlayerMotor localMotor;
+
     private void Update()
     {
+        if (localMotor == null)
+        {
+            foreach (var m in FindObjectsOfType<PlayerMotor>())
+                if (m.IsOwner)
+                    localMotor = m;
+        }
+
         if (rootPanel != null) rootPanel.SetActive(true);
         if (timerText != null)
         {
@@ -30,6 +40,14 @@ public class HUDController : MonoBehaviour
         if (teamBLiveText != null) teamBLiveText.text = MatchController.AliveB.ToString();
         if (teamAReservesText != null) teamAReservesText.text = MatchController.ReservesA.ToString();
         if (teamBReservesText != null) teamBReservesText.text = MatchController.ReservesB.ToString();
+
+        if (reloadingText != null)
+        {
+            if (localMotor != null)
+                reloadingText.SetActive(localMotor.IsReloadingNet.Value);
+            else
+                reloadingText.SetActive(false);
+        }
     }
 
     public void ShowVictory(Team winner)

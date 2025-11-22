@@ -51,6 +51,8 @@ public class PlayerInputs : NetworkBehaviour
         bool fireHeld = Input.GetMouseButton(0);
         bool fireEdge = fireHeld && !_prevFireHeldThisFrame;
 
+        bool reloadPressed = Input.GetKeyDown(KeyCode.R);
+
         LatestInput = new InputData
         {
             Move = move,
@@ -60,7 +62,8 @@ public class PlayerInputs : NetworkBehaviour
             CrouchPressedEdge = crouchEdge,
             PronePressedEdge = proneEdge,
             Yaw = yaw,
-            Pitch = pit
+            Pitch = pit,
+            ReloadPressed = reloadPressed
         };
 
         _bufferedInput.Move = move;
@@ -71,6 +74,7 @@ public class PlayerInputs : NetworkBehaviour
         _bufferedInput.PronePressedEdge |= proneEdge;
         _bufferedInput.Yaw = yaw;
         _bufferedInput.Pitch = pit;
+        _bufferedInput.ReloadPressed |= reloadPressed;
 
         _prevFireHeldThisFrame = fireHeld;
 

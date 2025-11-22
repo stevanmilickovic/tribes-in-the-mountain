@@ -29,6 +29,8 @@ public class PlayerMotor : TickNetworkBehaviour
     public readonly SyncVar<bool> IsCrouchingNet = new();
     public readonly SyncVar<bool> IsProneNet = new();
     public readonly SyncVar<float> SpeedNet = new();
+    public readonly SyncVar<bool> IsReloadingNet = new();
+    public readonly SyncVar<bool> HasAmmoNet = new();
 
     private PredictionRigidbody _pred;
     private bool _isCrouching;
@@ -37,6 +39,7 @@ public class PlayerMotor : TickNetworkBehaviour
     private bool _isReloading;
     private uint _nextAllowedFireTick;
     private uint _nextAllowedJumpTick;
+    private bool _hasAmmo = true;
 
     Vector3 _netTargetPos;
 
@@ -51,6 +54,7 @@ public class PlayerMotor : TickNetworkBehaviour
         public bool IsReloading;
         public uint NextAllowedFireTick;
         public uint NextAllowedJumpTick;
+        public bool HasAmmo;
 
         private uint _tick;
         public void Dispose() { }
@@ -134,7 +138,8 @@ public class PlayerMotor : TickNetworkBehaviour
             IsProne = _isProne,
             IsReloading = _isReloading,
             NextAllowedFireTick = _nextAllowedFireTick,
-            NextAllowedJumpTick = _nextAllowedJumpTick
+            NextAllowedJumpTick = _nextAllowedJumpTick,
+            HasAmmo = _hasAmmo
         };
 
         PerformReconcile(sd);
@@ -148,6 +153,8 @@ public class PlayerMotor : TickNetworkBehaviour
             IsCrouchingNet.Value = _isCrouching;
             IsProneNet.Value = _isProne;
             SpeedNet.Value = _pred.Rigidbody.velocity.magnitude;
+            IsReloadingNet.Value = _isReloading;
+            HasAmmoNet.Value = _hasAmmo;
             if (IsAiming.Value != rd.AimHeld)
             {
                 IsAiming.Value = rd.AimHeld;
@@ -159,9 +166,9 @@ public class PlayerMotor : TickNetworkBehaviour
             GetComponent<PlayerAudio>()?.PlayRuffle();
 
         movement.SimulateGroundCheck(ref _grounded, _pred.Rigidbody, groundMask);
-        movement.SimulateMove(rd, _pred, _grounded, _isCrouching, _isProne);
+        movement.SimulateMove(rd, _pred, _grounded, _isCrouching, _isProne, _isReloading);
         movement.SimulateJump(rd, _pred, _grounded, ref _nextAllowedJumpTick, TimeManager.LocalTick);
-        shoot.ProcessFire(rd, ref _isReloading, ref _nextAllowedFireTick, TimeManager.LocalTick, this, _pred);
+        shoot.ProcessFire(rd, ref _isReloading, ref _nextAllowedFireTick, TimeManager.LocalTick, this, _pred, HasAmmoNet.Value);
         movement.ApplyDrag(_pred, _grounded, (float)TimeManager.TickDelta);
         movement.ClampSpeed(_pred);
 
@@ -183,6 +190,7 @@ public class PlayerMotor : TickNetworkBehaviour
         _isReloading = sd.IsReloading;
         _nextAllowedFireTick = sd.NextAllowedFireTick;
         _nextAllowedJumpTick = sd.NextAllowedJumpTick;
+        _hasAmmo = sd.HasAmmo;
 
         rb.position = sd.Position;
         rb.velocity = sd.Velocity;
@@ -192,6 +200,8 @@ public class PlayerMotor : TickNetworkBehaviour
     public void SetReloading(bool value)
     {
         _isReloading = value;
+        if (IsServerInitialized)
+            IsReloadingNet.Value = value;
     }
 
     [ServerRpc(RequireOwnership = true)]
@@ -261,6 +271,20 @@ public class PlayerMotor : TickNetworkBehaviour
     private void RpcClearPredictionCache()
     {
         ClearReplicateCache();
+    }
+
+    public void ConsumeAmmo()
+    {
+        _hasAmmo = false;
+        if (IsServerInitialized)
+            HasAmmoNet.Value = false;
+    }
+
+    public void RestoreAmmo()
+    {
+        _hasAmmo = true;
+        if (IsServerInitialized)
+            HasAmmoNet.Value = true;
     }
 
     public bool IsGrounded => _grounded;

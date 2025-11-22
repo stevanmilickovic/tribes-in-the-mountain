@@ -32,7 +32,7 @@ public class PlayerMovement
         grounded = Physics.Raycast(origin, Vector3.down, playerHeight * 0.5f + 0.3f, groundMask, QueryTriggerInteraction.Ignore);
     }
 
-    public void SimulateMove(InputData rd, PredictionRigidbody body, bool grounded, bool isCrouching, bool isProne)
+    public void SimulateMove(InputData rd, PredictionRigidbody body, bool grounded, bool isCrouching, bool isProne, bool isReloading)
     {
         float yaw = rd.Yaw;
         Quaternion basis = Quaternion.Euler(0f, yaw, 0f);
@@ -49,6 +49,9 @@ public class PlayerMovement
 
         if (rd.AimHeld)
             speedMultiplier *= 0.2f;
+
+        if (isReloading)
+            speedMultiplier *= 0.4f;
 
         Vector3 force = moveDir.normalized * moveSpeed * 10f * speedMultiplier;
 

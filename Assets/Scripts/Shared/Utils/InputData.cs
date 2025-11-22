@@ -11,6 +11,7 @@ public struct InputData : IReplicateData
     public bool AimHeld;
     public float Yaw;
     public float Pitch;
+    public bool ReloadPressed;
     private uint _tick;
     public void Dispose() { }
     public uint GetTick() => _tick;
