@@ -20,6 +20,8 @@ public class PlayerHealth : NetworkBehaviour
     [Tooltip("Optional root for renderers to hide on death (leave null to keep visible).")]
     public Transform visualsRoot;
 
+    private bool matchEnded = false;
+
     private Rigidbody _rb => GetComponent<Rigidbody>();
     private PlayerMotor _motor => GetComponent<PlayerMotor>();
     private PlayerTeam _team => GetComponent<PlayerTeam>();
@@ -76,6 +78,9 @@ public class PlayerHealth : NetworkBehaviour
 
     private IEnumerator RespawnRoutineServer()
     {
+        if (matchEnded)
+            yield break;
+
         float t = Mathf.Max(0f, respawnDelay);
         if (t > 0f) yield return new WaitForSeconds(t);
 
@@ -154,6 +159,11 @@ public class PlayerHealth : NetworkBehaviour
         if (root == null) return;
         var rends = root.GetComponentsInChildren<Renderer>(true);
         foreach (var r in rends) r.enabled = enabled;
+    }
+
+    public void CancelRespawn()
+    {
+        matchEnded = true;
     }
 
     [ObserversRpc(BufferLast = false)]

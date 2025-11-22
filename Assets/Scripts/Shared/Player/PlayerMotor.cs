@@ -40,6 +40,8 @@ public class PlayerMotor : TickNetworkBehaviour
     private uint _nextAllowedFireTick;
     private uint _nextAllowedJumpTick;
     private bool _hasAmmo = true;
+    private bool _justTeleported = false;
+    private int _skipBroadcastTicks = 0;
 
     Vector3 _netTargetPos;
 
@@ -192,7 +194,10 @@ public class PlayerMotor : TickNetworkBehaviour
         _nextAllowedJumpTick = sd.NextAllowedJumpTick;
         _hasAmmo = sd.HasAmmo;
 
-        rb.position = sd.Position;
+        if (_skipBroadcastTicks <= 0)   // allow reconcile only after teleport stabilization
+        {
+            rb.position = sd.Position;
+        }
         rb.velocity = sd.Velocity;
     }
 
@@ -222,9 +227,18 @@ public class PlayerMotor : TickNetworkBehaviour
     [Server]
     void BroadcastPoseToObservers(Vector3 pos)
     {
+        // Do not broadcast for a few ticks after teleport
+        if (_skipBroadcastTicks > 0)
+        {
+            _skipBroadcastTicks--;
+            return;
+        }
+
         foreach (var c in Observers)
-            if (c != Owner) TargetRecvPose(c, pos.x, pos.y, pos.z);
+            if (c != Owner)
+                TargetRecvPose(c, pos.x, pos.y, pos.z);
     }
+
 
     [TargetRpc]
     void TargetRecvPose(NetworkConnection _, float px, float py, float pz)
@@ -258,13 +272,40 @@ public class PlayerMotor : TickNetworkBehaviour
         if (rb == null)
             rb = GetComponent<Rigidbody>();
 
+        // SERVER HARD SNAP
         rb.position = pos;
         rb.rotation = rot;
         rb.velocity = Vector3.zero;
         rb.angularVelocity = Vector3.zero;
 
+        // prevent pose broadcast for next tick
+        _justTeleported = true;
+        _skipBroadcastTicks = 2;   // NEW FIELD (see Patch 3)
+
+        // reset server + client prediction caches
         ClearReplicateCache();
         RpcClearPredictionCache();
+
+        // Tell all observers to instantly snap
+        RpcTeleport(pos, rot);
+    }
+
+
+    [ObserversRpc(BufferLast = false)]
+    private void RpcTeleport(Vector3 pos, Quaternion rot)
+    {
+        // Hard snap on ALL non-owners.
+        if (IsOwner) return;
+
+        rb.position = pos;
+        rb.rotation = rot;
+        rb.velocity = Vector3.zero;
+        rb.angularVelocity = Vector3.zero;
+
+        // Also fix interpolation target
+        _netTargetPos = pos;
+
+        ClearReplicateCache();
     }
 
     [ObserversRpc(BufferLast = false)]

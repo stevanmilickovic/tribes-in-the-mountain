@@ -206,6 +206,9 @@ public class MatchController : NetworkSingleton<MatchController>
     {
         if (state.Value == MatchState.PostRound) return;
 
+        foreach (var ph in FindObjectsOfType<PlayerHealth>())
+            ph.CancelRespawn();
+
         state.Value = MatchState.PostRound;
         Rpc_OnMatchEnded(winner);
 
@@ -231,12 +234,7 @@ public class MatchController : NetworkSingleton<MatchController>
         if (hud != null)
             hud.HideVictory();
 
-        foreach (var c in corpses)
-        {
-            if (c != null)
-                Destroy(c);
-        }
-        corpses.Clear();
+        Rpc_ClearCorpses();
 
         state.Value = MatchState.Live;
         remainingSeconds.Value = Mathf.Max(1, roundSeconds);
@@ -329,6 +327,7 @@ public class MatchController : NetworkSingleton<MatchController>
         if (prefab == null) return;
 
         GameObject corpse = Instantiate(prefab, pos, rot);
+        corpse.transform.SetParent(null, true);
 
         Animator anim = corpse.GetComponentInChildren<Animator>();
         if (anim != null)
@@ -336,6 +335,19 @@ public class MatchController : NetworkSingleton<MatchController>
             anim.Play(deathAnim, 0, 1f);
             anim.Update(0f);
         }
+
+        corpses.Add(corpse);
+    }
+
+    [ObserversRpc(BufferLast = false)]
+    private void Rpc_ClearCorpses()
+    {
+        foreach (var c in corpses)
+        {
+            if (c != null)
+                Destroy(c);
+        }
+        corpses.Clear();
     }
 
 

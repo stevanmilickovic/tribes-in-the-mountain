@@ -47,7 +47,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   target: {fileID: 721128818354707098}
   followSpeed: 20
-  snapDistance: 0
+  snapDistance: 2
 --- !u!1 &913851180156551523
 GameObject:
   m_ObjectHideFlags: 0
