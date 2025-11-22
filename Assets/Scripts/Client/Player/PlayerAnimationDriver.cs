@@ -17,6 +17,8 @@ public class PlayerAnimationDriver : NetworkBehaviour
     private bool _hasLast;
     private bool wasDead;
 
+    public string lastDeathAnim;
+
     private void LateUpdate()
     {
         if (anim == null || motor == null) return;
@@ -24,6 +26,12 @@ public class PlayerAnimationDriver : NetworkBehaviour
         if (!health.IsAlive)
         {
             wasDead = true;
+
+            if (motor.IsProneNet.Value) lastDeathAnim = "DeathProne";
+            else if (motor.IsCrouchingNet.Value) lastDeathAnim = "DeathCrouched";
+            else if (motor.PredictedVelocity.magnitude > 2f) lastDeathAnim = "DeathRun";
+            else lastDeathAnim = "DeathStanding";
+
             anim.SetTrigger("Death");
             return;
         }

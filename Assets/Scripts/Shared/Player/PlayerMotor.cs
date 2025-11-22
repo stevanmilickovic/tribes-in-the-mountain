@@ -231,7 +231,6 @@ public class PlayerMotor : TickNetworkBehaviour
 
         if (smokePrefab != null && muzzle != null)
         {
-            // Look in the same direction as the actual shot
             var rot = Quaternion.LookRotation(dir, Vector3.up);
 
             var smokeObj = Instantiate(smokePrefab, muzzle.position, rot);
@@ -243,6 +242,26 @@ public class PlayerMotor : TickNetworkBehaviour
         }
     }
 
+    [Server]
+    public void Teleport(Vector3 pos, Quaternion rot)
+    {
+        if (rb == null)
+            rb = GetComponent<Rigidbody>();
+
+        rb.position = pos;
+        rb.rotation = rot;
+        rb.velocity = Vector3.zero;
+        rb.angularVelocity = Vector3.zero;
+
+        ClearReplicateCache();
+        RpcClearPredictionCache();
+    }
+
+    [ObserversRpc(BufferLast = false)]
+    private void RpcClearPredictionCache()
+    {
+        ClearReplicateCache();
+    }
 
     public bool IsGrounded => _grounded;
     public bool IsCrouching => _isCrouching;

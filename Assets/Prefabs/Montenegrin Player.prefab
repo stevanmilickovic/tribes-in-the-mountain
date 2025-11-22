@@ -47,6 +47,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   target: {fileID: 721128818354707098}
   followSpeed: 20
+  snapDistance: 0
 --- !u!1 &913851180156551523
 GameObject:
   m_ObjectHideFlags: 0
@@ -354,6 +355,7 @@ MonoBehaviour:
   health: {fileID: 2872090865942907698}
   aimLayerIndex: 1
   aimBlendSpeed: 3
+  lastDeathAnim: 
 --- !u!114 &3661411025921208178
 MonoBehaviour:
   m_ObjectHideFlags: 0

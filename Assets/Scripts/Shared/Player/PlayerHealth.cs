@@ -79,6 +79,8 @@ public class PlayerHealth : NetworkBehaviour
         float t = Mathf.Max(0f, respawnDelay);
         if (t > 0f) yield return new WaitForSeconds(t);
 
+        MatchController.SpawnCorpseFor(this);
+
         Team team = (_team != null) ? _team.team.Value : Team.None;
 
         if (!MatchController.ServerCanTeamSpawn(team))
@@ -86,7 +88,6 @@ public class PlayerHealth : NetworkBehaviour
             Target_OnBecameSpectator(Owner);
             yield break;
         }
-
         Transform spawn = MatchController.GetSpawnForTeam(team);
 
         Vector3 pos = (spawn ? spawn.position : transform.position);
@@ -106,9 +107,7 @@ public class PlayerHealth : NetworkBehaviour
 
     private void ServerSnapTo(Vector3 pos, Quaternion rot)
     {
-        transform.SetPositionAndRotation(pos, rot);
-        _rb.velocity = Vector3.zero; 
-        _rb.angularVelocity = Vector3.zero;
+        _motor.Teleport(pos, rot);
     }
 
     [TargetRpc]

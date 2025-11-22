@@ -1,9 +1,10 @@
-using UnityEngine;
+using FishNet.Component.Transforming;
+using FishNet.Connection;
 using FishNet.Object;
 using FishNet.Object.Synchronizing;
-using FishNet.Connection;
 using System.Collections;
-using FishNet.Component.Transforming;
+using System.Collections.Generic;
+using UnityEngine;
 
 public enum MatchState { PreRound, Live, PostRound }
 
@@ -26,6 +27,10 @@ public class MatchController : NetworkSingleton<MatchController>
     [SerializeField] private int startingReservesTeamA = 30;
     [SerializeField] private int startingReservesTeamB = 30;
 
+    [Header("Corpse Prefabs")]
+    [SerializeField] private GameObject montenegrinCorpsePrefab;
+    [SerializeField] private GameObject ottomanCorpsePrefab;
+
     HUDController hud;
 
     private readonly SyncVar<int> remainingSeconds = new();
@@ -38,6 +43,8 @@ public class MatchController : NetworkSingleton<MatchController>
     private readonly SyncVar<int> aliveB = new();
 
     private readonly SyncVar<MatchState> state = new();
+
+    private readonly List<GameObject> corpses = new();
 
     public int RemainingSeconds => remainingSeconds.Value;
     public int TeamACount => teamACount.Value;
@@ -224,6 +231,13 @@ public class MatchController : NetworkSingleton<MatchController>
         if (hud != null)
             hud.HideVictory();
 
+        foreach (var c in corpses)
+        {
+            if (c != null)
+                Destroy(c);
+        }
+        corpses.Clear();
+
         state.Value = MatchState.Live;
         remainingSeconds.Value = Mathf.Max(1, roundSeconds);
         reservesA.Value = Mathf.Max(0, startingReservesTeamA);
@@ -283,6 +297,46 @@ public class MatchController : NetworkSingleton<MatchController>
         CheckEliminationWin();
     }
 
+    [Server]
+    public void SpawnCorpseFor(PlayerHealth ph)
+    {
+        if (ph == null) return;
+
+        var pt = ph.GetComponent<PlayerTeam>();
+        var animDriver = ph.GetComponent<PlayerAnimationDriver>();
+
+        if (pt == null || animDriver == null) return;
+
+        Team team = pt.team.Value;
+        Vector3 pos = ph.transform.position;
+        Quaternion rot = ph.transform.rotation;
+        string deathAnim = animDriver.lastDeathAnim;
+
+        RpcSpawnCorpse(team, pos, rot, deathAnim);
+    }
+
+
+    [ObserversRpc(BufferLast = false)]
+    private void RpcSpawnCorpse(Team team, Vector3 pos, Quaternion rot, string deathAnim)
+    {
+        GameObject prefab = null;
+
+        if (team == Team.TeamA)
+            prefab = montenegrinCorpsePrefab;
+        else if (team == Team.TeamB)
+            prefab = ottomanCorpsePrefab;
+
+        if (prefab == null) return;
+
+        GameObject corpse = Instantiate(prefab, pos, rot);
+
+        Animator anim = corpse.GetComponentInChildren<Animator>();
+        if (anim != null)
+        {
+            anim.Play(deathAnim, 0, 1f);
+            anim.Update(0f);
+        }
+    }
 
 
     [ObserversRpc]

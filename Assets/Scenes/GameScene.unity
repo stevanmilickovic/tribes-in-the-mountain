@@ -1748,6 +1748,8 @@ MonoBehaviour:
   intermissionSeconds: 5
   startingReservesTeamA: 2
   startingReservesTeamB: 2
+  montenegrinCorpsePrefab: {fileID: 7539718774427416911, guid: 47cad4a8e88c21741ac8bd0cffb9e1bf, type: 3}
+  ottomanCorpsePrefab: {fileID: 7482308203535832165, guid: c117d6d0873c1c64b861c8b34b625484, type: 3}
 --- !u!1 &392392931
 GameObject:
   m_ObjectHideFlags: 0
@@ -4668,7 +4670,7 @@ Transform:
   m_GameObject: {fileID: 1237845107}
   serializedVersion: 2
   m_LocalRotation: {x: 0.014867053, y: 0.97592443, z: -0.21337354, w: -0.042688068}
-  m_LocalPosition: {x: 1450.8605, y: 362.4534, z: 1330.9197}
+  m_LocalPosition: {x: 1451.8456, y: 361.49765, z: 1331.2605}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -4707,7 +4709,7 @@ Camera:
     height: 1
   near clip plane: 0.1
   far clip plane: 5000
-  field of view: 45
+  field of view: 65
   orthographic: 0
   orthographic size: 10
   m_Depth: 0
