@@ -19,14 +19,12 @@ public class CameraBinder : NetworkBehaviour
         Camera mainCam = Camera.main;
         if (mainCam == null)
         {
-            Debug.LogWarning("PlayerCameraBinder: No main camera found in scene.");
             return;
         }
 
         ThirdPersonCam cam = mainCam.GetComponent<ThirdPersonCam>();
         if (cam == null)
         {
-            Debug.LogWarning("PlayerCameraBinder: Could not find ThirdPersonCam under the main camera.");
             return;
         }
 
@@ -34,8 +32,6 @@ public class CameraBinder : NetworkBehaviour
 
         if (playerInputs != null)
             playerInputs.cameraRig = cam;
-
-        Debug.Log("PlayerCameraBinder: Successfully bound local camera rig to player prefab.");
 
         AimTargetController atc = mainCam.GetComponent<AimTargetController>();
 

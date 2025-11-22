@@ -50,10 +50,8 @@ public class PlayerShoot
 
         motor.RpcOnFire(dir);
 
-        Debug.DrawRay(origin, dir * maxRange, Color.red, 1f);
         if (Physics.Raycast(origin, dir, out RaycastHit hit, maxRange, ~0, QueryTriggerInteraction.Ignore))
         {
-            Debug.Log($"Hit {hit.collider.name}");
             if (hit.collider.transform.root != motor.transform.root)
             {
                 var targetHealth = hit.collider.GetComponentInParent<PlayerHealth>();
