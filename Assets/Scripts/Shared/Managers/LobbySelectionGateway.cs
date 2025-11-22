@@ -35,6 +35,7 @@ public class LobbySelectionGateway : NetworkSingleton<LobbySelectionGateway>
     {
         if (!IsServerStarted) return;
         if (team == Team.None || conn == null) return;
+        if (!match.CanJoinTeam(team)) return;
 
         _pending[conn] = team;
         TrySpawnFor(conn);

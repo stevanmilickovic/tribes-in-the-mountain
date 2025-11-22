@@ -60,6 +60,9 @@ public class MatchController : NetworkSingleton<MatchController>
 
     private float _accum;
 
+    [SerializeField] private int maxTeamA = 10;
+    [SerializeField] private int maxTeamB = 10;
+
     public override void OnStartServer()
     {
         base.OnStartServer();
@@ -92,6 +95,16 @@ public class MatchController : NetworkSingleton<MatchController>
         }
 
         PushCountsIfChanged();
+    }
+
+    public bool CanJoinTeam(Team team)
+    {
+        return team switch
+        {
+            Team.TeamA => TeamACount < maxTeamA,
+            Team.TeamB => TeamBCount < maxTeamB,
+            _ => false
+        };
     }
 
     public void ServerJoinTeam(PlayerTeam player, Team desired)

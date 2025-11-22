@@ -8,7 +8,7 @@ public class CaptureZone : NetworkBehaviour
     [Header("Zone Settings")]
     [SerializeField] private float radius = 5f;
     [SerializeField] private Team attackingTeam = Team.TeamB;
-    [SerializeField] private float captureRatePerSecond = 1f;
+    [SerializeField] private float captureRatePerSecond = 0.3f;
     [SerializeField] private float decayPerSecond = 0.10f;
 
     [Header("Sync Vars (read-only on clients)")]
