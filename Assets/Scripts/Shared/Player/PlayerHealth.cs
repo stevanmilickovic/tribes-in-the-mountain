@@ -98,7 +98,7 @@ public class PlayerHealth : NetworkBehaviour
         Vector3 pos = (spawn ? spawn.position : transform.position);
         Quaternion rot = (spawn ? spawn.rotation : transform.rotation);
 
-        ServerSnapTo(pos, rot);
+        _motor.Teleport(pos, rot);
 
         yield return null;
 

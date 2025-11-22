@@ -12,8 +12,11 @@ public enum MatchState { PreRound, Live, PostRound }
 public class MatchController : NetworkSingleton<MatchController>
 {
     [Header("Spawns")]
-    [SerializeField] private Transform teamASpawn;
-    [SerializeField] private Transform teamBSpawn;
+    [SerializeField] private Transform[] teamASpawns;
+    [SerializeField] private Transform[] teamBSpawns;
+
+    private int _aIndex = 0;
+    private int _bIndex = 0;
 
     [Header("Capture Zones")]
     [SerializeField] private CaptureZone captureZone;
@@ -114,9 +117,26 @@ public class MatchController : NetworkSingleton<MatchController>
 
     public Transform GetSpawnForTeam(Team team)
     {
-        if (team == Team.TeamA) return teamASpawn;
-        if (team == Team.TeamB) return teamBSpawn;
-        return null;
+        if (team == Team.None)
+            return null;
+
+        Transform[] arr = (team == Team.TeamA) ? teamASpawns : teamBSpawns;
+
+        if (arr == null || arr.Length == 0)
+            return null;
+
+        if (team == Team.TeamA)
+        {
+            Transform t = arr[_aIndex % arr.Length];
+            _aIndex++;
+            return t;
+        }
+        else
+        {
+            Transform t = arr[_bIndex % arr.Length];
+            _bIndex++;
+            return t;
+        }
     }
 
     public void ServerOnPlayerSpawned(PlayerTeam player, bool consumeReserve = true)
