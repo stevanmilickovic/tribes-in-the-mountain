@@ -262,6 +262,28 @@ public class MatchController : NetworkSingleton<MatchController>
         pt.GetComponent<Rigidbody>().angularVelocity = Vector3.zero;
     }
 
+    public void ServerOnPlayerDisconnected(PlayerTeam pt)
+    {
+        if (!IsServerInitialized || pt == null) return;
+
+        switch (pt.team.Value)
+        {
+            case Team.TeamA:
+                aliveA.Value = Mathf.Max(0, aliveA.Value - 1);
+                reservesA.Value += 1;
+                break;
+
+            case Team.TeamB:
+                aliveB.Value = Mathf.Max(0, aliveB.Value - 1);
+                reservesB.Value += 1;
+                break;
+        }
+
+        PushCountsImmediate();
+        CheckEliminationWin();
+    }
+
+
 
     [ObserversRpc]
     private void Rpc_OnMatchEnded(Team winner)

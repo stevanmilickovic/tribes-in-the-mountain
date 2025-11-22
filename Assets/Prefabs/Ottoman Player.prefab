@@ -304,6 +304,10 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1294418109039712168, guid: ea2c0cfb1227e7e468312b9f03cfb552, type: 3}
+      propertyPath: _detachGraphicalObject
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1294418109039712168, guid: ea2c0cfb1227e7e468312b9f03cfb552, type: 3}
       propertyPath: <SceneId>k__BackingField
       value: 0
       objectReference: {fileID: 0}

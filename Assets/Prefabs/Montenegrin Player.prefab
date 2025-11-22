@@ -280,8 +280,8 @@ MonoBehaviour:
   NetworkObserver: {fileID: 0}
   _enablePrediction: 1
   _predictionType: 1
-  _graphicalObject: {fileID: 0}
-  _detachGraphicalObject: 0
+  _graphicalObject: {fileID: 271099231719261030}
+  _detachGraphicalObject: 1
   _enableStateForwarding: 0
   _networkTransform: {fileID: 0}
   _ownerInterpolation: 1
@@ -291,7 +291,7 @@ MonoBehaviour:
   _spectatorInterpolation: 2
   _enableTeleport: 0
   _teleportThreshold: 1
-  <PrefabId>k__BackingField: 0
+  <PrefabId>k__BackingField: 5
   <SpawnableCollectionId>k__BackingField: 0
   <AssetPathHash>k__BackingField: 7820530118875116611
   <SceneId>k__BackingField: 0

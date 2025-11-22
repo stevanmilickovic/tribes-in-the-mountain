@@ -11,6 +11,8 @@ public class LobbySelectionGateway : NetworkSingleton<LobbySelectionGateway>
 
     private readonly Dictionary<NetworkConnection, Team> _pending = new Dictionary<NetworkConnection, Team>();
 
+    private readonly Dictionary<NetworkConnection, PlayerTeam> _spawnedPlayers = new();
+
     private MatchController match => MatchController.Instance;
 
     public override void OnStartServer()
@@ -42,7 +44,18 @@ public class LobbySelectionGateway : NetworkSingleton<LobbySelectionGateway>
     {
         if (args.ConnectionState == RemoteConnectionState.Started) return;
         if (args.ConnectionState == RemoteConnectionState.Stopped)
+        {
             _pending.Remove(conn);
+
+            if (_spawnedPlayers.TryGetValue(conn, out var pt))
+            {
+                match.ServerOnPlayerDisconnected(pt);
+                if (pt != null && pt.gameObject != null)
+                    base.NetworkManager.ServerManager.Despawn(pt.gameObject);
+
+                _spawnedPlayers.Remove(conn);
+            }
+        }
     }
 
     private void TrySpawnFor(NetworkConnection conn)
@@ -64,6 +77,7 @@ public class LobbySelectionGateway : NetworkSingleton<LobbySelectionGateway>
         var pt = go.GetComponent<PlayerTeam>();
         if (pt != null)
         {
+            _spawnedPlayers[conn] = pt;
             match.ServerJoinTeam(pt, team);
             match.ServerOnPlayerSpawned(pt);
         }
