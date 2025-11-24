@@ -10,6 +10,8 @@ public class PlayerInputs : NetworkBehaviour
 
     private bool _prevFireHeldThisFrame;
 
+    public static bool Paused = false;
+
     public override void OnStartClient()
     {
         if (!IsOwner)
@@ -19,6 +21,14 @@ public class PlayerInputs : NetworkBehaviour
     private void Update()
     {
         if (!IsOwner) return;
+
+        if (Paused)
+        {
+            LatestInput = new InputData();
+            _bufferedInput = new InputData();
+            return;
+        }
+
         CollectUnityInput();
     }
 

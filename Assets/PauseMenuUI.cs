@@ -17,6 +17,8 @@ public class PauseMenuUI : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.Escape))
         {
             panel.SetActive(!panel.activeSelf);
+            PlayerInputs.Paused = panel.activeSelf;
+
             Cursor.lockState = panel.activeSelf ? CursorLockMode.None : CursorLockMode.Locked;
             Cursor.visible = panel.activeSelf;
         }
@@ -34,6 +36,7 @@ public class PauseMenuUI : MonoBehaviour
     public void Resume()
     {
         panel.SetActive(false);
+        PlayerInputs.Paused = false;
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
     }
