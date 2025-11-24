@@ -166,6 +166,11 @@ public class PlayerHealth : NetworkBehaviour
         matchEnded = true;
     }
 
+    public void EnableRespawn()
+    {
+        matchEnded = false;
+    }
+
     [ObserversRpc(BufferLast = false)]
     private void Rpc_OnDied()
     {

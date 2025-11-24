@@ -286,6 +286,7 @@ public class MatchController : NetworkSingleton<MatchController>
             var ph = pt.GetComponent<PlayerHealth>();
             ph.ServerForceAlive(true);
             ph.ServerRestoreFull();
+            ph.EnableRespawn();
 
             pt.GetComponent<PlayerMotor>().Teleport(pos, rot);
 
