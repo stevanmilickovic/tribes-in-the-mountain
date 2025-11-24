@@ -31,6 +31,9 @@ public class PlayerShoot
         if (!hasAmmo)
             return;
 
+        if (!motor.IsAiming.Value)
+            return;
+
         if (!rd.FirePressedEdge)
             return;
 
