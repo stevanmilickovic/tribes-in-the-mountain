@@ -262,8 +262,7 @@ public class MatchController : NetworkSingleton<MatchController>
 
     private void StartNewRound()
     {
-        if (hud != null)
-            hud.HideVictory();
+        Rpc_StartNewRound();
 
         Rpc_ClearCorpses();
 
@@ -381,5 +380,12 @@ public class MatchController : NetworkSingleton<MatchController>
     {
         if (hud != null)
             hud.ShowVictory(winner);
+    }
+
+    [ObserversRpc]
+    private void Rpc_StartNewRound()
+    {
+        if (hud != null)
+            hud.HideVictory();
     }
 }
