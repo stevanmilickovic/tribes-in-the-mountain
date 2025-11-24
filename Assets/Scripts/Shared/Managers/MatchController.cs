@@ -289,7 +289,7 @@ public class MatchController : NetworkSingleton<MatchController>
 
             pt.GetComponent<PlayerMotor>().Teleport(pos, rot);
 
-            ServerOnPlayerSpawned(pt, consumeReserve: false);
+            ServerOnPlayerSpawned(pt, consumeReserve: true);
         }
 
         if (captureZone != null)

@@ -7,10 +7,10 @@ public class PlayerMovement
     public float airMultiplier = 0.6f;
     public float rotationSpeed = 12f;
     public float aimingRotationSpeed = 20f;
-    public float jumpForce = 1.5f;
+    public float jumpForce = 3f;
     public float groundDrag = 4f;
     public float playerHeight = 1.8f;
-    public uint jumpCooldownTicks = 5;
+    public uint jumpCooldownTicks = 64;
 
     public void SimulateStance(InputData rd, ref bool isCrouching, ref bool isProne)
     {
