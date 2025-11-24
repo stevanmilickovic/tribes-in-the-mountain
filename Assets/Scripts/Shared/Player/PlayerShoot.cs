@@ -16,9 +16,12 @@ public class PlayerShoot
     {
         if (rd.ReloadPressed && !isReloading)
         {
-            motor.SetReloading(true);
-            if (motor.IsServerInitialized)
-                motor.StartCoroutine(FinishReload(motor, reloadSeconds));
+            if (!hasAmmo)
+            {
+                motor.SetReloading(true);
+                if (motor.IsServerInitialized)
+                    motor.StartCoroutine(FinishReload(motor, reloadSeconds));
+            }
             return;
         }
 

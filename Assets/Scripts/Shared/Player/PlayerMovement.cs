@@ -50,8 +50,8 @@ public class PlayerMovement
         if (rd.AimHeld)
             speedMultiplier *= 0.2f;
 
-        if (isReloading)
-            speedMultiplier *= 0.4f;
+        //if (isReloading)
+        //    speedMultiplier *= 0.4f;
 
         Vector3 force = moveDir.normalized * moveSpeed * 10f * speedMultiplier;
 
