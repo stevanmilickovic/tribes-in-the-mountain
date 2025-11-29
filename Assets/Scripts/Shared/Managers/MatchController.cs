@@ -38,7 +38,7 @@ public class MatchController : NetworkSingleton<MatchController>
     [SerializeField] private GameObject ottomanCorpsePrefab;
 
     [Header("Capture Zones")]
-    [SerializeField] private CaptureZone[] zones;
+    [SerializeField] public CaptureZone[] zones;
 
     private Team[] zoneOwners;
     private int[] zoneSpawnIndices;
