@@ -259,6 +259,10 @@ PrefabInstance:
       propertyPath: muzzle
       value: 
       objectReference: {fileID: 7480629904486187519}
+    - target: {fileID: 271099231719261030, guid: ea2c0cfb1227e7e468312b9f03cfb552, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.083
+      objectReference: {fileID: 0}
     - target: {fileID: 721128818354707098, guid: ea2c0cfb1227e7e468312b9f03cfb552, type: 3}
       propertyPath: m_LocalPosition.x
       value: 1463.2677
@@ -305,15 +309,31 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1294418109039712168, guid: ea2c0cfb1227e7e468312b9f03cfb552, type: 3}
       propertyPath: _detachGraphicalObject
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1294418109039712168, guid: ea2c0cfb1227e7e468312b9f03cfb552, type: 3}
       propertyPath: <SceneId>k__BackingField
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1294418109039712168, guid: ea2c0cfb1227e7e468312b9f03cfb552, type: 3}
+      propertyPath: <PrefabId>k__BackingField
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1294418109039712168, guid: ea2c0cfb1227e7e468312b9f03cfb552, type: 3}
       propertyPath: <AssetPathHash>k__BackingField
       value: 2911224916316121339
+      objectReference: {fileID: 0}
+    - target: {fileID: 1294418109039712168, guid: ea2c0cfb1227e7e468312b9f03cfb552, type: 3}
+      propertyPath: SerializedTransformProperties.Position.x
+      value: 1463.2677
+      objectReference: {fileID: 0}
+    - target: {fileID: 1294418109039712168, guid: ea2c0cfb1227e7e468312b9f03cfb552, type: 3}
+      propertyPath: SerializedTransformProperties.Position.y
+      value: 350.654
+      objectReference: {fileID: 0}
+    - target: {fileID: 1294418109039712168, guid: ea2c0cfb1227e7e468312b9f03cfb552, type: 3}
+      propertyPath: SerializedTransformProperties.Position.z
+      value: 1296.5718
       objectReference: {fileID: 0}
     - target: {fileID: 1715684365727957010, guid: ea2c0cfb1227e7e468312b9f03cfb552, type: 3}
       propertyPath: m_Name
@@ -376,7 +396,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: ff2d98a2fd1533644a38246178116db4, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -1
+      value: -0.975
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: ff2d98a2fd1533644a38246178116db4, type: 3}
       propertyPath: m_LocalPosition.z

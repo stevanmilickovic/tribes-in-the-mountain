@@ -83,42 +83,38 @@ public class HUDController : MonoBehaviour
 
     private void CheckCaptureZones()
     {
-        if (tribesVictoryPanel.activeSelf || ottomansVictoryPanel.activeSelf) return;
+        if (tribesVictoryPanel.activeSelf || ottomansVictoryPanel.activeSelf)
+            return;
 
-        if (zoneCapturingText != null)
+        bool anyContested = false;
+        float highestProgress = 0f;
+
+        if (zones != null)
         {
-            bool anyZoneCapturing = false;
-
-            if (zones != null)
+            foreach (var z in zones)
             {
-                foreach (var z in zones)
-                {
-                    if (z.Attackers > 0)   // <--- NEW LOGIC
-                    {
-                        anyZoneCapturing = true;
-                        break;
-                    }
-                }
-            }
+                if (!z) continue;
 
-            zoneCapturingText.SetActive(anyZoneCapturing);
+                // If any zone currently has attackers inside
+                if (z.IsContested)
+                    anyContested = true;
+
+                // Track the highest progress percentage to show
+                if (z.Progress > highestProgress)
+                    highestProgress = z.Progress;
+            }
         }
 
+        // "Church being captured!" or any generic zone message
+        if (zoneCapturingText != null)
+            zoneCapturingText.SetActive(anyContested);
+
+        // shows % of the most-progressed zone being flipped
         if (zoneProgressText != null)
         {
-            float highestProgress = 0f;
-
-            if (zones != null)
-            {
-                foreach (var z in zones)
-                {
-                    if (z.Progress > highestProgress)
-                        highestProgress = z.Progress;
-                }
-            }
-
             int percent = Mathf.RoundToInt(highestProgress * 100f);
             zoneProgressText.text = percent + "%";
         }
     }
+
 }

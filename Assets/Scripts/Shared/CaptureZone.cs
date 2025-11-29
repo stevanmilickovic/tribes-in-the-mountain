@@ -7,18 +7,23 @@ public class CaptureZone : NetworkBehaviour
 {
     [Header("Zone Settings")]
     [SerializeField] private float radius = 5f;
-    [SerializeField] private Team attackingTeam = Team.TeamB;
     [SerializeField] private float captureRatePerSecond = 0.3f;
     [SerializeField] private float decayPerSecond = 0.10f;
+    [SerializeField] private Team initialOwner = Team.TeamA;
+    [SerializeField] private Transform[] spawnPoints;
+    public Transform[] Spawns => spawnPoints;
+
+    public Team InitialOwner => initialOwner;
+
 
     [Header("Sync Vars (read-only on clients)")]
     private readonly SyncVar<Team> teamOwner = new();
     private readonly SyncVar<float> progress = new();
-    private readonly SyncVar<int> attackersCount = new();
+    private readonly SyncVar<bool> isContested = new();
 
     public float Progress => progress.Value;
     public Team Owner => teamOwner.Value;
-    public int Attackers => attackersCount.Value;
+    public bool IsContested => isContested.Value;
 
     private readonly Collider[] _buffer = new Collider[16];
     private float _accum;
@@ -28,8 +33,8 @@ public class CaptureZone : NetworkBehaviour
     public override void OnStartServer()
     {
         base.OnStartServer();
-        teamOwner.Value = Team.None;
         progress.Value = 0f;
+        teamOwner.Value = initialOwner;
     }
 
     private void Update()
@@ -43,8 +48,13 @@ public class CaptureZone : NetworkBehaviour
         if (_accum < 0.25f) return;
         _accum = 0f;
 
-        int attackers = 0;
-        int defenders = 0;
+        HandleZoneCaptureProgress();
+    }
+
+    private void HandleZoneCaptureProgress()
+    {
+        int teamA = 0;
+        int teamB = 0;
 
         int count = Physics.OverlapSphereNonAlloc(transform.position, radius, _buffer, LayerMask.GetMask("PlayerHitbox"));
         for (int i = 0; i < count; i++)
@@ -56,33 +66,51 @@ public class CaptureZone : NetworkBehaviour
             var teamComp = col.GetComponentInParent<PlayerTeam>();
             if (teamComp == null) continue;
 
-            if (teamComp.team.Value == attackingTeam)
-                attackers++;
-            else
-                defenders++;
+            if (teamComp.team.Value == Team.TeamA) teamA++;
+            else if (teamComp.team.Value == Team.TeamB)
+            {
+                teamB++;
+            }
         }
-        attackersCount.Value = attackers;
+
+        bool attackersPresent = false;
+        if (teamOwner.Value == Team.TeamA) attackersPresent = teamB > 0;
+        else if (teamOwner.Value == Team.TeamB) attackersPresent = teamA > 0;
+
+        isContested.Value = attackersPresent;
 
         float delta = 0f;
-        if (attackers > defenders)
-            delta = captureRatePerSecond * (attackers - defenders);
-        else if (defenders > attackers)
-            delta = -decayPerSecond * (defenders - attackers);
+
+        if (teamOwner.Value == Team.TeamA)
+        {
+            if (teamB > teamA) delta = captureRatePerSecond * (teamB - teamA);
+            else if (teamA > teamB) delta = -decayPerSecond * (teamA - teamB);
+        }
+        else if (teamOwner.Value == Team.TeamB)
+        {
+            if (teamA > teamB) delta = captureRatePerSecond * (teamA - teamB);
+            else if (teamB > teamA) delta = -decayPerSecond * (teamB - teamA);
+        }
 
         progress.Value = Mathf.Clamp01(progress.Value + delta * 0.25f);
 
         if (progress.Value >= 1f)
         {
-            teamOwner.Value = attackingTeam;
-            match?.ServerOnZoneCaptured(attackingTeam);
+            teamOwner.Value = (teamOwner.Value == Team.TeamA) ? Team.TeamB : Team.TeamA;
+            progress.Value = 0f;
+            match?.ServerOnZoneCaptured(this);
+        }
+        else if (progress.Value <= 0f)
+        {
             progress.Value = 0f;
         }
     }
 
+
     public void ResetZone()
     {
         progress.Value = 0f;
-        teamOwner.Value = Team.None;
+        teamOwner.Value = initialOwner;
     }
 
 #if UNITY_EDITOR
