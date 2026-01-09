@@ -1,7 +1,8 @@
+using FishNet.Object;
+using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
-using FishNet.Object;
-using System.Collections.Generic;
 
 public class MiniMapController : NetworkBehaviour
 {
@@ -25,9 +26,15 @@ public class MiniMapController : NetworkBehaviour
     private RectTransform localPlayerIcon;
     private Transform localPlayer;
 
-    private void Start()
+    public override void OnStartClient()
     {
-        CacheLocal();
+        base.OnStartClient();
+        StartCoroutine(Init());
+    }
+
+    private IEnumerator Init()
+    {
+        while (localTeam == null) { SetLocalPlayerAndTeam(); yield return null; }
         CacheTeams();
         CacheZones();
         CreateIcons();
@@ -45,7 +52,7 @@ public class MiniMapController : NetworkBehaviour
         UpdateZoneIcons();
     }
 
-    private void CacheLocal()
+    private void SetLocalPlayerAndTeam()
     {
         var players = FindObjectsByType<PlayerTeam>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
         foreach (var p in players)
@@ -106,7 +113,7 @@ public class MiniMapController : NetworkBehaviour
     {
         if (localPlayer == null)
         {
-            CacheLocal();
+            return;
         }
         var pos = WorldToMapPosition(localPlayer.position);
         localPlayerIcon.anchoredPosition = pos;
