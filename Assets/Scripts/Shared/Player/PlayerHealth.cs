@@ -1,9 +1,7 @@
-using System.Collections;
 using UnityEngine;
 using FishNet.Object;
 using FishNet.Object.Synchronizing;
 using FishNet.Connection;
-using FishNet.Component.Transforming;
 
 [DisallowMultipleComponent]
 public class PlayerHealth : NetworkBehaviour
@@ -13,33 +11,39 @@ public class PlayerHealth : NetworkBehaviour
     public readonly SyncVar<int> currentHealth = new();
 
     [Header("Respawn")]
-    [Tooltip("Seconds to wait before respawn.")]
-    public float respawnDelay = 5f;
+    public float respawnDelay = 0f;
 
     [Header("Optional Visual Toggle")]
-    [Tooltip("Optional root for renderers to hide on death (leave null to keep visible).")]
     public Transform visualsRoot;
 
     private bool matchEnded = false;
+    private float diedAtServerTime = -999f;
+
+    private readonly SyncVar<bool> aliveNet = new(true);
+    private readonly SyncVar<bool> awaitingRespawnSelectionNet = new(false);
+    private readonly SyncVar<int> preferredSpawnZoneIndex = new(-1);
+
+    private bool corpseSpawnedThisDeath = false;
+
+    public bool IsAlive => aliveNet.Value;
+    public bool AwaitingRespawnSelection => awaitingRespawnSelectionNet.Value;
+    public int PreferredSpawnZoneIndex => preferredSpawnZoneIndex.Value;
 
     private Rigidbody _rb => GetComponent<Rigidbody>();
     private PlayerMotor _motor => GetComponent<PlayerMotor>();
     private PlayerTeam _team => GetComponent<PlayerTeam>();
-
     private MatchController MatchController => MatchController.Instance;
-
-    public bool IsAlive => currentHealth.Value > 0;
 
     public override void OnStartServer()
     {
         base.OnStartServer();
         currentHealth.Value = Mathf.Max(1, maxHealth);
+        preferredSpawnZoneIndex.Value = -1;
+        aliveNet.Value = true;
+        awaitingRespawnSelectionNet.Value = false;
+        diedAtServerTime = -999f;
+        corpseSpawnedThisDeath = false;
         SetAliveServer(true);
-    }
-
-    public override void OnStartClient()
-    {
-        base.OnStartClient();
     }
 
     public void TakeDamageServer(int amount, NetworkObject instigator = null)
@@ -58,7 +62,15 @@ public class PlayerHealth : NetworkBehaviour
     private void DieServer(NetworkObject killer)
     {
         if (!IsServerInitialized) return;
+        if (!IsAlive) return;
+
+        currentHealth.Value = 0;
+        aliveNet.Value = false;
         SetAliveServer(false);
+
+        awaitingRespawnSelectionNet.Value = true;
+        diedAtServerTime = Time.time;
+        corpseSpawnedThisDeath = false;
 
         if (_rb != null)
         {
@@ -66,59 +78,79 @@ public class PlayerHealth : NetworkBehaviour
             _rb.angularVelocity = Vector3.zero;
         }
 
-        Debug.Log(_team);
         if (_team != null)
-        {
             MatchController.ServerOnPlayerDied(_team);
-        }
 
-        Rpc_OnDied();
-        StartCoroutine(RespawnRoutineServer());
+        Target_OnAwaitingRespawn(Owner);
     }
 
-    private IEnumerator RespawnRoutineServer()
+    [ServerRpc(RequireOwnership = true)]
+    public void SetPreferredSpawnZone(int zoneIndex)
     {
-        if (matchEnded)
-            yield break;
+        if (!IsServerInitialized) return;
+        if (_team == null) return;
+
+        if (zoneIndex < 0)
+        {
+            preferredSpawnZoneIndex.Value = -1;
+            return;
+        }
+
+        if (MatchController == null) return;
+
+        if (MatchController.TryGetSpawnForTeamAtZone(_team.team.Value, zoneIndex, out _))
+            preferredSpawnZoneIndex.Value = zoneIndex;
+    }
+
+    [ServerRpc(RequireOwnership = true)]
+    public void RequestRespawnNow()
+    {
+        if (!IsServerInitialized) return;
+        if (matchEnded) return;
+        if (IsAlive) return;
+        if (!awaitingRespawnSelectionNet.Value) return;
 
         float t = Mathf.Max(0f, respawnDelay);
-        if (t > 0f) yield return new WaitForSeconds(t);
+        if (Time.time - diedAtServerTime < t) return;
 
-        MatchController.SpawnCorpseFor(this);
+        if (!corpseSpawnedThisDeath)
+        {
+            MatchController.SpawnCorpseFor(this);
+            corpseSpawnedThisDeath = true;
+        }
 
         Team team = (_team != null) ? _team.team.Value : Team.None;
-
         if (!MatchController.ServerCanTeamSpawn(team))
         {
+            awaitingRespawnSelectionNet.Value = false;
             Target_OnBecameSpectator(Owner);
-            yield break;
+            return;
         }
-        Transform spawn = MatchController.GetSpawnForTeam(team);
 
-        Vector3 pos = (spawn ? spawn.position : transform.position);
-        Quaternion rot = (spawn ? spawn.rotation : transform.rotation);
+        Transform spawn = null;
+        int zi = preferredSpawnZoneIndex.Value;
+
+        if (zi >= 0 && MatchController.TryGetSpawnForTeamAtZone(team, zi, out var preferred))
+            spawn = preferred;
+
+        if (spawn == null)
+            return; // force explicit spawn selection
+
+        Vector3 pos = spawn.position;
+        Quaternion rot = spawn.rotation;
 
         _motor.Teleport(pos, rot);
-
-        yield return null;
 
         currentHealth.Value = maxHealth;
+        aliveNet.Value = true;
         SetAliveServer(true);
 
-        if (_team != null) MatchController.ServerOnPlayerSpawned(_team);
+        awaitingRespawnSelectionNet.Value = false;
 
-        Rpc_OnRespawned(Owner, pos, rot);
-    }
+        if (_team != null)
+            MatchController.ServerOnPlayerSpawned(_team);
 
-    private void ServerSnapTo(Vector3 pos, Quaternion rot)
-    {
-        _motor.Teleport(pos, rot);
-    }
-
-    [TargetRpc]
-    private void Target_OnBecameSpectator(NetworkConnection conn)
-    {
-        // TODO: switch to spectator camera/UI; player remains non-interactive.
+        Target_OnRespawnSelectionEnded(Owner);
     }
 
     private void SetAliveServer(bool alive)
@@ -130,14 +162,18 @@ public class PlayerHealth : NetworkBehaviour
     public void ServerForceAlive(bool alive)
     {
         if (!IsServerInitialized) return;
+        aliveNet.Value = alive;
         SetAliveServer(alive);
     }
 
     public void ServerRestoreFull()
     {
         if (!IsServerInitialized) return;
+
         currentHealth.Value = maxHealth;
+        aliveNet.Value = true;
         SetAliveServer(true);
+
         if (_rb)
         {
             _rb.velocity = Vector3.zero;
@@ -164,6 +200,7 @@ public class PlayerHealth : NetworkBehaviour
     public void CancelRespawn()
     {
         matchEnded = true;
+        awaitingRespawnSelectionNet.Value = false;
     }
 
     public void EnableRespawn()
@@ -171,17 +208,18 @@ public class PlayerHealth : NetworkBehaviour
         matchEnded = false;
     }
 
-    [ObserversRpc(BufferLast = false)]
-    private void Rpc_OnDied()
+    [TargetRpc]
+    private void Target_OnAwaitingRespawn(NetworkConnection conn)
     {
-        // Hook UI/FX here later (fade out, death text, etc.)
-        // Intentionally minimal for prototype.
     }
 
     [TargetRpc]
-    private void Rpc_OnRespawned(NetworkConnection conn, Vector3 pos, Quaternion rot)
+    private void Target_OnRespawnSelectionEnded(NetworkConnection conn)
     {
-        // Owner-only UI hook (e.g., fade in, “Respawned” toast).
-        // CameraBinder remains valid since we didn’t destroy the object.
+    }
+
+    [TargetRpc]
+    private void Target_OnBecameSpectator(NetworkConnection conn)
+    {
     }
 }

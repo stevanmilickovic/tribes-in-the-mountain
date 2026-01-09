@@ -78,6 +78,9 @@ public class PlayerMotor : TickNetworkBehaviour
 
         var rd = inputs.LatestInput;
 
+        if (Cursor.lockState != CursorLockMode.Locked)
+            return;
+
         movement.SimulateRotation(rd, _pred, Time.deltaTime, target);
 
         if (Time.time >= _nextRotSend)

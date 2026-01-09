@@ -1742,12 +1742,13 @@ MonoBehaviour:
   _networkObjectCache: {fileID: 0}
   maxTeamA: 5
   maxTeamB: 10
-  captureZone: {fileID: 780629073}
   teamManager: {fileID: 369706149}
   roundSeconds: 300
   intermissionSeconds: 5
   startingReservesTeamA: 10
   startingReservesTeamB: 20
+  includeUncapturableZonesInBleed: 0
+  bleedReservesPerSecondPerZoneDiff: 0.2
   montenegrinCorpsePrefab: {fileID: 7539718774427416911, guid: 47cad4a8e88c21741ac8bd0cffb9e1bf, type: 3}
   ottomanCorpsePrefab: {fileID: 7482308203535832165, guid: c117d6d0873c1c64b861c8b34b625484, type: 3}
   zones:
@@ -1755,6 +1756,82 @@ MonoBehaviour:
   - {fileID: 1042012360}
   - {fileID: 478417483}
   hud: {fileID: 0}
+--- !u!1 &382252660
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 382252663}
+  - component: {fileID: 382252662}
+  - component: {fileID: 382252661}
+  m_Layer: 5
+  m_Name: Select spawn text
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 0
+--- !u!114 &382252661
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 382252660}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Material: {fileID: 0}
+  m_Color: {r: 0.46226418, g: 0.42955682, b: 0.42955682, a: 1}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 10907, guid: 0000000000000000f000000000000000, type: 0}
+  m_Type: 1
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+--- !u!222 &382252662
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 382252660}
+  m_CullTransparentMesh: 1
+--- !u!224 &382252663
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 382252660}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 1193592122}
+  m_Father: {fileID: 1527188914}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
+  m_AnchoredPosition: {x: 19.300049, y: 416.05}
+  m_SizeDelta: {x: -1363.6, y: -1007.1}
+  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &392392931
 GameObject:
   m_ObjectHideFlags: 0
@@ -2240,6 +2317,7 @@ MonoBehaviour:
   captureRatePerSecond: 0.3
   decayPerSecond: 0.1
   initialOwner: 2
+  uncapturable: 1
   spawnPoints:
   - {fileID: 2038803270}
   - {fileID: 413721818}
@@ -3454,6 +3532,7 @@ MonoBehaviour:
   captureRatePerSecond: 0.15
   decayPerSecond: 0.1
   initialOwner: 1
+  uncapturable: 0
   spawnPoints: []
 --- !u!135 &780629074
 SphereCollider:
@@ -4803,7 +4882,8 @@ MonoBehaviour:
   radius: 10
   captureRatePerSecond: 0.3
   decayPerSecond: 0.1
-  initialOwner: 1
+  initialOwner: 0
+  uncapturable: 0
   spawnPoints:
   - {fileID: 620022417}
   - {fileID: 955953391}
@@ -5316,6 +5396,7 @@ MonoBehaviour:
   captureRatePerSecond: 0.15
   decayPerSecond: 0.1
   initialOwner: 1
+  uncapturable: 1
   spawnPoints:
   - {fileID: 1546443794}
   - {fileID: 885574054}
@@ -5469,12 +5550,19 @@ MonoBehaviour:
   teamBLiveText: {fileID: 1279069633}
   teamAReservesText: {fileID: 105854075}
   teamBReservesText: {fileID: 1106203389}
+  teamAZonesText: {fileID: 0}
+  teamBZonesText: {fileID: 0}
+  bleedStatusText: {fileID: 0}
+  includeUncapturableZonesInBleedUI: 0
+  teamAName: Team A
+  teamBName: Team B
   zoneProgressText: {fileID: 969700223}
+  zoneCapturingText: {fileID: 1797670466}
   tribesVictoryPanel: {fileID: 1908769962}
   ottomansVictoryPanel: {fileID: 728960640}
   rootPanel: {fileID: 1527188911}
   reloadingText: {fileID: 2108873747}
-  zoneCapturingText: {fileID: 1797670466}
+  spawnSelectPrompt: {fileID: 382252660}
 --- !u!114 &1192467978
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5558,6 +5646,140 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0, y: 0}
+--- !u!1 &1193592121
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1193592122}
+  - component: {fileID: 1193592124}
+  - component: {fileID: 1193592123}
+  m_Layer: 5
+  m_Name: Text (TMP)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &1193592122
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1193592121}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 382252663}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: -7.0995, y: 0.000013351}
+  m_SizeDelta: {x: 293.5423, y: 50}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &1193592123
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1193592121}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_text: Choose spawn
+  m_isRightToLeft: 0
+  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontSharedMaterials: []
+  m_fontMaterial: {fileID: 0}
+  m_fontMaterials: []
+  m_fontColor32:
+    serializedVersion: 2
+    rgba: 4294967295
+  m_fontColor: {r: 1, g: 1, b: 1, a: 1}
+  m_enableVertexGradient: 0
+  m_colorMode: 3
+  m_fontColorGradient:
+    topLeft: {r: 1, g: 1, b: 1, a: 1}
+    topRight: {r: 1, g: 1, b: 1, a: 1}
+    bottomLeft: {r: 1, g: 1, b: 1, a: 1}
+    bottomRight: {r: 1, g: 1, b: 1, a: 1}
+  m_fontColorGradientPreset: {fileID: 0}
+  m_spriteAsset: {fileID: 0}
+  m_tintAllSprites: 0
+  m_StyleSheet: {fileID: 0}
+  m_TextStyleHashCode: -1183493901
+  m_overrideHtmlColors: 0
+  m_faceColor:
+    serializedVersion: 2
+    rgba: 4294967295
+  m_fontSize: 43.32
+  m_fontSizeBase: 43.32
+  m_fontWeight: 400
+  m_enableAutoSizing: 0
+  m_fontSizeMin: 18
+  m_fontSizeMax: 72
+  m_fontStyle: 0
+  m_HorizontalAlignment: 2
+  m_VerticalAlignment: 512
+  m_textAlignment: 65535
+  m_characterSpacing: 0
+  m_wordSpacing: 0
+  m_lineSpacing: 0
+  m_lineSpacingMax: 0
+  m_paragraphSpacing: 0
+  m_charWidthMaxAdj: 0
+  m_enableWordWrapping: 1
+  m_wordWrappingRatios: 0.4
+  m_overflowMode: 0
+  m_linkedTextComponent: {fileID: 0}
+  parentLinkedComponent: {fileID: 0}
+  m_enableKerning: 1
+  m_enableExtraPadding: 0
+  checkPaddingRequired: 0
+  m_isRichText: 1
+  m_parseCtrlCharacters: 1
+  m_isOrthographic: 1
+  m_isCullingEnabled: 0
+  m_horizontalMapping: 0
+  m_verticalMapping: 0
+  m_uvLineOffset: 0
+  m_geometrySortingOrder: 0
+  m_IsTextObjectScaleStatic: 0
+  m_VertexBufferAutoSizeReduction: 0
+  m_useMaxVisibleDescender: 1
+  m_pageToDisplay: 1
+  m_margin: {x: 0, y: 0, z: 0, w: 0}
+  m_isUsingLegacyAnimationComponent: 0
+  m_isVolumetricText: 0
+  m_hasFontAssetChanged: 0
+  m_baseMaterial: {fileID: 0}
+  m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!222 &1193592124
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1193592121}
+  m_CullTransparentMesh: 1
 --- !u!1 &1193902121
 GameObject:
   m_ObjectHideFlags: 0
@@ -6341,9 +6563,12 @@ MonoBehaviour:
   zoneIconPrefab: {fileID: 5276123817966127623, guid: 7a5a8f28f5463564c8db916c37b7c932, type: 3}
   flagTeamA: {fileID: 21300000, guid: 9e2d0987e350e724a81fa9d0d930828b, type: 3}
   flagTeamB: {fileID: 21300000, guid: e8a803f5d0132a64db9c7a0d73d256a0, type: 3}
+  flagNeutral: {fileID: 21300000, guid: b902f763d0e47364dae25207b7e47800, type: 3}
+  lockOverlaySprite: {fileID: 21300000, guid: b3905a73a6672d9449647aaf036e23fc, type: 3}
   toggleKey: 9
   worldBottomLeft: {x: 1766.8, y: 1377.1}
   worldTopRight: {x: 1185.7, y: 1052.2}
+  teammateRefreshSeconds: 1
 --- !u!4 &1246264656
 Transform:
   m_ObjectHideFlags: 0
@@ -7717,6 +7942,7 @@ RectTransform:
   - {fileID: 1787351222}
   - {fileID: 2013199938}
   - {fileID: 1908769963}
+  - {fileID: 382252663}
   - {fileID: 728960641}
   - {fileID: 1797670469}
   - {fileID: 2108873750}
