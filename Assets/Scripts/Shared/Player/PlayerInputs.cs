@@ -15,7 +15,10 @@ public class PlayerInputs : NetworkBehaviour
     public override void OnStartClient()
     {
         if (!IsOwner)
+        {
             enabled = false;
+            return;
+        }
 
         Paused = false;
     }
