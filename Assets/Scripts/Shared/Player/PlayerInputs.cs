@@ -16,6 +16,8 @@ public class PlayerInputs : NetworkBehaviour
     {
         if (!IsOwner)
             enabled = false;
+
+        Paused = false;
     }
 
     private void Update()
