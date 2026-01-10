@@ -6,10 +6,9 @@ using FishNet.Connection;
 
 public class LobbySelectionGateway : NetworkSingleton<LobbySelectionGateway>
 {
-    [SerializeField] private GameObject teamAPlayerPrefab;
-    [SerializeField] private GameObject teamBPlayerPrefab;
+    [SerializeField] private GameObject playerPrefab;
 
-    private readonly Dictionary<NetworkConnection, Team> _pending = new();
+    private readonly Dictionary<NetworkConnection, string> _pending = new();
     private readonly Dictionary<NetworkConnection, PlayerTeam> _spawnedPlayers = new();
 
     private MatchController match => MatchController.Instance;
@@ -34,16 +33,26 @@ public class LobbySelectionGateway : NetworkSingleton<LobbySelectionGateway>
     }
 
     [ServerRpc(RequireOwnership = false)]
-    public void SubmitTeamChoice(Team team, NetworkConnection conn = null)
+    public void SubmitTeamChoice(string teamId, NetworkConnection conn = null)
     {
         if (!IsServerStarted) return;
         if (conn == null) return;
-        if (team == Team.None) return;
+        if (string.IsNullOrWhiteSpace(teamId)) return;
+        if (teamId == TeamDatabase.NeutralId) return;
+
+        var db = TeamDatabase.Instance;
+        if (db == null || !db.IsValidTeamId(teamId)) return;
 
         if (match == null) return;
-        if (!match.CanJoinTeam(team)) return;
+        if (!match.CanJoinTeam(teamId)) return;
 
-        _pending[conn] = team;
+        if (_spawnedPlayers.TryGetValue(conn, out var existing) && existing != null)
+        {
+            existing.ServerSetTeamId(teamId);
+            return;
+        }
+
+        _pending[conn] = teamId;
         TrySpawnFor(conn);
     }
 
@@ -74,16 +83,15 @@ public class LobbySelectionGateway : NetworkSingleton<LobbySelectionGateway>
         if (!IsServerStarted) return;
         if (conn == null) return;
 
-        if (!_pending.TryGetValue(conn, out var team))
+        if (!_pending.TryGetValue(conn, out var teamId))
             return;
 
         if (match == null) return;
-        if (!match.ServerCanTeamSpawn(team)) return;
+        if (!match.ServerCanTeamSpawn(teamId)) return;
 
-        Transform sp = match.GetSpawnForTeam(team);
-
-        GameObject playerPrefab = (team == Team.TeamA) ? teamAPlayerPrefab : teamBPlayerPrefab;
         if (playerPrefab == null) return;
+
+        Transform sp = match.GetSpawnForTeam(teamId);
 
         GameObject go = (sp != null)
             ? Instantiate(playerPrefab, sp.position, sp.rotation)
@@ -95,8 +103,7 @@ public class LobbySelectionGateway : NetworkSingleton<LobbySelectionGateway>
         if (pt != null)
         {
             _spawnedPlayers[conn] = pt;
-            match.ServerJoinTeam(pt, team);
-
+            match.ServerJoinTeam(pt, teamId);
             match.ServerOnPlayerSpawned(pt, consumeReserve: false);
         }
 

@@ -14,6 +14,8 @@ public class PlayerShoot
 
     public void ProcessFire(InputData rd, ref bool isReloading, ref uint nextAllowedFireTick, uint currentTick, PlayerMotor motor, PredictionRigidbody body, bool hasAmmo)
     {
+        if (motor == null) return;
+
         if (rd.ReloadPressed && !isReloading)
         {
             if (!hasAmmo)
@@ -25,40 +27,41 @@ public class PlayerShoot
             return;
         }
 
-        if (isReloading)
+        if (isReloading) return;
+        if (!hasAmmo) return;
+
+        if (!motor.IsAiming.Value) return;
+        if (!rd.FirePressedEdge) return;
+
+        if (currentTick < nextAllowedFireTick) return;
+
+        if (!motor.IsServerInitialized)
             return;
 
-        if (!hasAmmo)
-            return;
-
-        if (!motor.IsAiming.Value)
-            return;
-
-        if (!rd.FirePressedEdge)
-            return;
-
-        motor.ConsumeAmmo();
-
-        nextAllowedFireTick = currentTick + fireCooldownTicks;
-
-        if (!motor.IsServerInitialized) return;
         if (motor.Health != null && !motor.Health.IsAlive) return;
-        if (motor.Orientation == null) return;
+
+        if (motor.aimGun == null) return;
+        if (motor.aimGun.aimTransform == null) return;
 
         Vector3 origin = motor.aimGun.aimTransform.position;
-        Vector3 dir = (motor.aimGun.targetPosition - origin).normalized;
+        Vector3 toTarget = motor.aimGun.targetPosition - origin;
+        if (toTarget.sqrMagnitude < 0.000001f) return;
 
-        // Pick correct spread based on aiming
+        motor.ConsumeAmmo();
+        nextAllowedFireTick = currentTick + fireCooldownTicks;
+
+        Vector3 dir = toTarget.normalized;
+
         float spread = motor.IsAiming.Value ? aimingSpreadDegrees : hipfireSpreadDegrees;
-
-        // Apply inaccuracy
         dir = ApplySpread(dir, spread).normalized;
 
         motor.RpcOnFire(dir);
 
+        if (!motor.IsServerInitialized) return;
+
         if (Physics.Raycast(origin, dir, out RaycastHit hit, maxRange, ~0, QueryTriggerInteraction.Ignore))
         {
-            if (hit.collider.transform.root != motor.transform.root)
+            if (hit.collider != null && hit.collider.transform.root != motor.transform.root)
             {
                 var targetHealth = hit.collider.GetComponentInParent<PlayerHealth>();
                 if (targetHealth != null && targetHealth.IsAlive)
@@ -73,27 +76,31 @@ public class PlayerShoot
     private IEnumerator FinishReload(PlayerMotor motor, float wait)
     {
         yield return new WaitForSeconds(wait);
-        if (!motor.IsServerInitialized) yield break;
+        if (motor == null || !motor.IsServerInitialized) yield break;
         motor.SetReloading(false);
         motor.RestoreAmmo();
     }
 
     private bool SameTeamAs(PlayerTeam myTeam, PlayerHealth otherHealth)
     {
-        if (myTeam == null) return false;
+        if (myTeam == null || otherHealth == null) return false;
+
+        string myId = myTeam.TeamId;
+        if (string.IsNullOrWhiteSpace(myId) || myId == TeamDatabase.NeutralId) return false;
+
         var otherTeam = otherHealth.GetComponent<PlayerTeam>();
         if (otherTeam == null) return false;
-        return otherTeam.team.Value == myTeam.team.Value && myTeam.team.Value != Team.None;
+
+        string otherId = otherTeam.TeamId;
+        if (string.IsNullOrWhiteSpace(otherId) || otherId == TeamDatabase.NeutralId) return false;
+
+        return otherId == myId;
     }
 
     private Vector3 ApplySpread(Vector3 forward, float spreadDeg)
     {
-        // Pick a random pitch/yaw offset in DEGREES
         Vector2 random = Random.insideUnitCircle * spreadDeg;
-
-        // Apply pitch (x) and yaw (y)
         Quaternion rot = Quaternion.Euler(random.x, random.y, 0f);
-
         return rot * forward;
     }
 }

@@ -1,6 +1,5 @@
 using Cinemachine;
 using UnityEngine;
-using UnityEngine.UIElements;
 
 public class ThirdPersonCam : MonoBehaviour
 {
@@ -25,33 +24,33 @@ public class ThirdPersonCam : MonoBehaviour
     public GameObject crosshair;
 
     bool _wasAiming;
-
     private PlayerInputs playerInputs;
 
     void Start()
     {
-        //crosshair.SetActive(false);
-        freeCam.Priority = activePriority;
-        aimCam.Priority = inactivePriority;
-
-        //aimCam.m_XAxis.Value = freeCam.m_XAxis.Value;
-        //aimCam.m_YAxis.Value = freeCam.m_YAxis.Value;
-
-        //var y = player.eulerAngles.y;
-        //orientation.rotation = Quaternion.Euler(0f, y, 0f);
+        if (freeCam != null) freeCam.Priority = activePriority;
+        if (aimCam != null) aimCam.Priority = inactivePriority;
     }
 
     public void SetPlayerInfo(Transform player, Transform orientation, Transform playerObj)
     {
         this.player = player;
         this.orientation = orientation;
-        playerInputs = player.GetComponent<PlayerInputs>();
 
-        freeCam.Follow = playerObj;
-        freeCam.LookAt = playerObj;
+        if (player != null)
+            playerInputs = player.GetComponent<PlayerInputs>();
 
-        aimCam.Follow = playerObj;
-        aimCam.LookAt = playerObj;
+        if (freeCam != null)
+        {
+            freeCam.Follow = playerObj;
+            freeCam.LookAt = playerObj;
+        }
+
+        if (aimCam != null)
+        {
+            aimCam.Follow = playerObj;
+            aimCam.LookAt = playerObj;
+        }
     }
 
     void LateUpdate()
@@ -59,7 +58,6 @@ public class ThirdPersonCam : MonoBehaviour
         if (player == null || orientation == null) return;
 
         SetPitchAndYaw();
-
         UpdateCam();
     }
 
@@ -80,6 +78,9 @@ public class ThirdPersonCam : MonoBehaviour
 
     private void UpdateCam()
     {
+        if (playerInputs == null || freeCam == null || aimCam == null || crosshair == null)
+            return;
+
         bool aiming = playerInputs.LatestInput.AimHeld;
         if (aiming != _wasAiming)
         {

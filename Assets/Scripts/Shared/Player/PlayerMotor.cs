@@ -1,11 +1,14 @@
-using UnityEngine;
+using FishNet.Connection;
+using FishNet.Object;
 using FishNet.Object.Prediction;
+using FishNet.Object.Synchronizing;
 using FishNet.Transporting;
 using FishNet.Utility.Template;
-using FishNet.Object.Synchronizing;
-using FishNet.Object;
-using FishNet.Connection;
-using FishNet.Component.Transforming;
+using System;
+using System.Globalization;
+using UnityEngine;
+using static FishNet.Utility.Template.TickNetworkBehaviour;
+using static UnityEngine.UI.GridLayoutGroup;
 
 public class PlayerMotor : TickNetworkBehaviour
 {
@@ -40,10 +43,9 @@ public class PlayerMotor : TickNetworkBehaviour
     private uint _nextAllowedFireTick;
     private uint _nextAllowedJumpTick;
     private bool _hasAmmo = true;
-    private bool _justTeleported = false;
     private int _skipBroadcastTicks = 0;
 
-    Vector3 _netTargetPos;
+    private Vector3 _netTargetPos;
 
     private struct StateData : IReconcileData
     {
@@ -64,12 +66,40 @@ public class PlayerMotor : TickNetworkBehaviour
         public void SetTick(uint value) => _tick = value;
     }
 
-
     private void Awake()
     {
         _pred = new PredictionRigidbody();
         movement = new PlayerMovement();
         shoot = new PlayerShoot();
+
+        if (rb == null) rb = GetComponent<Rigidbody>();
+        if (inputs == null) inputs = GetComponent<PlayerInputs>();
+        if (health == null) health = GetComponent<PlayerHealth>();
+        if (team == null) team = GetComponent<PlayerTeam>();
+        if (aimGun == null) aimGun = GetComponent<AimGun>();
+    }
+
+    public override void OnStartNetwork()
+    {
+        if (rb == null)
+            rb = GetComponent<Rigidbody>();
+
+        if (inputs == null) inputs = GetComponent<PlayerInputs>();
+        if (health == null) health = GetComponent<PlayerHealth>();
+        if (team == null) team = GetComponent<PlayerTeam>();
+        if (aimGun == null) aimGun = GetComponent<AimGun>();
+
+        if (aimGun != null && aimGun.playerMotor != this)
+            aimGun.playerMotor = this;
+
+        _pred.Initialize(rb);
+        SetTickCallbacks(TickCallback.Tick | TickCallback.PostTick);
+
+        if (!IsServerInitialized && !Owner.IsLocalClient)
+        {
+            rb.isKinematic = true;
+            rb.interpolation = RigidbodyInterpolation.None;
+        }
     }
 
     void Update()
@@ -93,43 +123,19 @@ public class PlayerMotor : TickNetworkBehaviour
     private void LateUpdate()
     {
         if (!IsOwner && !IsServerInitialized)
-        {
             rb.position = Vector3.Lerp(rb.position, _netTargetPos, 20f * Time.deltaTime);
-        }
-    }
-
-    public override void OnStartNetwork()
-    {
-        if (rb == null)
-        {
-            rb = GetComponent<Rigidbody>();
-        }
-
-        _pred.Initialize(rb);
-        SetTickCallbacks(TickCallback.Tick | TickCallback.PostTick);
-
-        if (!IsServerInitialized && !Owner.IsLocalClient)
-        {
-            rb.isKinematic = true;
-            rb.interpolation = RigidbodyInterpolation.None;
-        }
     }
 
     protected override void TimeManager_OnTick()
     {
         if (health != null && !health.IsAlive)
-        {
             return;
-        }
 
         var input = inputs.ConsumeForTick();
         PerformReplicate(input);
 
         if (IsServerInitialized)
-        {
             CreateReconcile();
-        }
-            
     }
 
     public override void CreateReconcile()
@@ -161,9 +167,7 @@ public class PlayerMotor : TickNetworkBehaviour
             IsReloadingNet.Value = _isReloading;
             HasAmmoNet.Value = _hasAmmo;
             if (IsAiming.Value != rd.AimHeld)
-            {
                 IsAiming.Value = rd.AimHeld;
-            }
         }
 
         movement.SimulateStance(rd, ref _isCrouching, ref _isProne);
@@ -180,15 +184,12 @@ public class PlayerMotor : TickNetworkBehaviour
         _pred.Simulate();
 
         if (IsServerInitialized)
-        {
             BroadcastPoseToObservers(rb.position);
-        }
     }
 
     [Reconcile]
     private void PerformReconcile(StateData sd, Channel channel = Channel.Unreliable)
     {
-
         _grounded = sd.Grounded;
         _isCrouching = sd.IsCrouching;
         _isProne = sd.IsProne;
@@ -197,13 +198,24 @@ public class PlayerMotor : TickNetworkBehaviour
         _nextAllowedJumpTick = sd.NextAllowedJumpTick;
         _hasAmmo = sd.HasAmmo;
 
-        if (_skipBroadcastTicks <= 0)   // allow reconcile only after teleport stabilization
-        {
+        if (_skipBroadcastTicks <= 0)
             rb.position = sd.Position;
-        }
+
         rb.velocity = sd.Velocity;
     }
 
+    public void BindLoadout(AimGun newAimGun, Transform newMuzzle)
+    {
+        if (newAimGun != null)
+            aimGun = newAimGun;
+        else if (aimGun == null)
+            aimGun = GetComponent<AimGun>();
+
+        muzzle = newMuzzle;
+
+        if (aimGun != null && aimGun.playerMotor != this)
+            aimGun.playerMotor = this;
+    }
 
     public void SetReloading(bool value)
     {
@@ -230,7 +242,6 @@ public class PlayerMotor : TickNetworkBehaviour
     [Server]
     void BroadcastPoseToObservers(Vector3 pos)
     {
-        // Do not broadcast for a few ticks after teleport
         if (_skipBroadcastTicks > 0)
         {
             _skipBroadcastTicks--;
@@ -241,7 +252,6 @@ public class PlayerMotor : TickNetworkBehaviour
             if (c != Owner)
                 TargetRecvPose(c, pos.x, pos.y, pos.z);
     }
-
 
     [TargetRpc]
     void TargetRecvPose(NetworkConnection _, float px, float py, float pz)
@@ -283,7 +293,6 @@ public class PlayerMotor : TickNetworkBehaviour
         _isReloading = false;
         _hasAmmo = true;
 
-        _justTeleported = true;
         _skipBroadcastTicks = 2;
 
         ClearReplicateCache();
@@ -291,7 +300,6 @@ public class PlayerMotor : TickNetworkBehaviour
 
         RpcTeleport(pos, rot);
     }
-
 
     [ObserversRpc(BufferLast = false)]
     private void RpcTeleport(Vector3 pos, Quaternion rot)
@@ -332,10 +340,12 @@ public class PlayerMotor : TickNetworkBehaviour
     public bool IsCrouching => _isCrouching;
     public bool IsProne => _isProne;
     public bool IsReloading => _isReloading;
+
     public Vector3 PredictedVelocity =>
         _pred != null && _pred.Rigidbody != null
             ? _pred.Rigidbody.velocity
             : Vector3.zero;
+
     public PredictionRigidbody Body => _pred;
     public PlayerTeam Team => team;
     public PlayerHealth Health => health;

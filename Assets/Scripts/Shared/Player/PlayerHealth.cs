@@ -78,7 +78,7 @@ public class PlayerHealth : NetworkBehaviour
             _rb.angularVelocity = Vector3.zero;
         }
 
-        if (_team != null)
+        if (_team != null && MatchController != null)
             MatchController.ServerOnPlayerDied(_team);
 
         Target_OnAwaitingRespawn(Owner);
@@ -89,6 +89,7 @@ public class PlayerHealth : NetworkBehaviour
     {
         if (!IsServerInitialized) return;
         if (_team == null) return;
+        if (MatchController == null) return;
 
         if (zoneIndex < 0)
         {
@@ -96,9 +97,10 @@ public class PlayerHealth : NetworkBehaviour
             return;
         }
 
-        if (MatchController == null) return;
+        string tid = _team.TeamId;
+        if (string.IsNullOrWhiteSpace(tid) || tid == TeamDatabase.NeutralId) return;
 
-        if (MatchController.TryGetSpawnForTeamAtZone(_team.team.Value, zoneIndex, out _))
+        if (MatchController.TryGetSpawnForTeamAtZone(tid, zoneIndex, out _))
             preferredSpawnZoneIndex.Value = zoneIndex;
     }
 
@@ -109,6 +111,7 @@ public class PlayerHealth : NetworkBehaviour
         if (matchEnded) return;
         if (IsAlive) return;
         if (!awaitingRespawnSelectionNet.Value) return;
+        if (MatchController == null) return;
 
         float t = Mathf.Max(0f, respawnDelay);
         if (Time.time - diedAtServerTime < t) return;
@@ -119,8 +122,9 @@ public class PlayerHealth : NetworkBehaviour
             corpseSpawnedThisDeath = true;
         }
 
-        Team team = (_team != null) ? _team.team.Value : Team.None;
-        if (!MatchController.ServerCanTeamSpawn(team))
+        string tid = _team != null ? _team.TeamId : TeamDatabase.NeutralId;
+
+        if (!MatchController.ServerCanTeamSpawn(tid))
         {
             awaitingRespawnSelectionNet.Value = false;
             Target_OnBecameSpectator(Owner);
@@ -130,16 +134,14 @@ public class PlayerHealth : NetworkBehaviour
         Transform spawn = null;
         int zi = preferredSpawnZoneIndex.Value;
 
-        if (zi >= 0 && MatchController.TryGetSpawnForTeamAtZone(team, zi, out var preferred))
+        if (zi >= 0 && MatchController.TryGetSpawnForTeamAtZone(tid, zi, out var preferred))
             spawn = preferred;
 
         if (spawn == null)
-            return; // force explicit spawn selection
+            return;
 
-        Vector3 pos = spawn.position;
-        Quaternion rot = spawn.rotation;
-
-        _motor.Teleport(pos, rot);
+        if (_motor != null)
+            _motor.Teleport(spawn.position, spawn.rotation);
 
         currentHealth.Value = maxHealth;
         aliveNet.Value = true;
@@ -148,7 +150,7 @@ public class PlayerHealth : NetworkBehaviour
         awaitingRespawnSelectionNet.Value = false;
 
         if (_team != null)
-            MatchController.ServerOnPlayerSpawned(_team);
+            MatchController.ServerOnPlayerSpawned(_team, consumeReserve: false);
 
         Target_OnRespawnSelectionEnded(Owner);
     }

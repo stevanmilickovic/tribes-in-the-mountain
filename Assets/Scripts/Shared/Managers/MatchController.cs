@@ -1,5 +1,3 @@
-using FishNet.Component.Transforming;
-using FishNet.Connection;
 using FishNet.Object;
 using FishNet.Object.Synchronizing;
 using System.Collections;
@@ -11,11 +9,11 @@ public enum MatchState { PreRound, Live, PostRound }
 [DisallowMultipleComponent]
 public class MatchController : NetworkSingleton<MatchController>
 {
+    public const string TeamAId = "team_a";
+    public const string TeamBId = "team_b";
+
     [SerializeField] private int maxTeamA = 10;
     [SerializeField] private int maxTeamB = 10;
-
-    [Header("Managers (auto-cached)")]
-    [SerializeField] private TeamManager teamManager;
 
     [Header("Match Config")]
     [SerializeField] private int roundSeconds = 600;
@@ -29,14 +27,13 @@ public class MatchController : NetworkSingleton<MatchController>
     [SerializeField] private bool includeUncapturableZonesInBleed = false;
     [SerializeField] private float bleedReservesPerSecondPerZoneDiff = 0.2f;
 
-    [Header("Corpse Prefabs")]
-    [SerializeField] private GameObject montenegrinCorpsePrefab;
-    [SerializeField] private GameObject ottomanCorpsePrefab;
-
     [Header("Capture Zones")]
     [SerializeField] public CaptureZone[] zones;
 
-    private Team[] zoneOwners;
+    [Header("Corpse")]
+    [SerializeField] private GameObject universalCorpsePrefab;
+
+    private string[] zoneOwners;
     private int[] zoneSpawnIndices;
 
     public HUDController hud;
@@ -53,6 +50,9 @@ public class MatchController : NetworkSingleton<MatchController>
     private readonly SyncVar<MatchState> state = new();
 
     private readonly List<GameObject> corpses = new();
+
+    private readonly HashSet<PlayerTeam> _teamAPlayers = new();
+    private readonly HashSet<PlayerTeam> _teamBPlayers = new();
 
     public int RemainingSeconds => remainingSeconds.Value;
     public int TeamACount => teamACount.Value;
@@ -71,8 +71,6 @@ public class MatchController : NetworkSingleton<MatchController>
     {
         base.OnStartServer();
 
-        EnsureManagers();
-
         state.Value = MatchState.Live;
         remainingSeconds.Value = Mathf.Max(1, roundSeconds);
 
@@ -82,15 +80,17 @@ public class MatchController : NetworkSingleton<MatchController>
         aliveA.Value = 0;
         aliveB.Value = 0;
 
-        zoneOwners = new Team[zones.Length];
-        zoneSpawnIndices = new int[zones.Length];
+        zoneOwners = new string[zones != null ? zones.Length : 0];
+        zoneSpawnIndices = new int[zones != null ? zones.Length : 0];
 
-        for (int i = 0; i < zones.Length; i++)
+        for (int i = 0; i < zoneOwners.Length; i++)
         {
-            zoneOwners[i] = (zones[i] != null) ? zones[i].InitialOwner : Team.None;
+            var z = zones[i];
+            zoneOwners[i] = z != null ? NormalizeTeamId(z.InitialOwnerId) : TeamDatabase.NeutralId;
             zoneSpawnIndices[i] = 0;
         }
 
+        RebuildTeamMembership();
         PushCountsImmediate();
     }
 
@@ -114,49 +114,64 @@ public class MatchController : NetworkSingleton<MatchController>
         }
     }
 
-    public bool CanJoinTeam(Team team)
+    public bool CanJoinTeam(string teamId)
     {
-        return team switch
+        teamId = NormalizeTeamId(teamId);
+        return teamId switch
         {
-            Team.TeamA => TeamACount < maxTeamA,
-            Team.TeamB => TeamBCount < maxTeamB,
+            TeamAId => TeamACount < maxTeamA,
+            TeamBId => TeamBCount < maxTeamB,
             _ => false
         };
     }
 
-    public void ServerJoinTeam(PlayerTeam player, Team desired)
+    public void ServerJoinTeam(PlayerTeam player, string desiredTeamId)
     {
-        if (!IsServerInitialized || player == null || desired == Team.None) return;
-        EnsureManagers();
-        teamManager.Join(player, desired);
-        player.team.Value = desired;
+        if (!IsServerInitialized || player == null) return;
+
+        desiredTeamId = NormalizeTeamId(desiredTeamId);
+        if (desiredTeamId == TeamDatabase.NeutralId) return;
+
+        RemoveFromTeams(player);
+
+        if (desiredTeamId == TeamAId) _teamAPlayers.Add(player);
+        else if (desiredTeamId == TeamBId) _teamBPlayers.Add(player);
+        else return;
+
+        player.teamId.Value = desiredTeamId;
+
         PushCountsIfChanged();
     }
 
-    public bool ServerCanTeamSpawn(Team team)
+    public bool ServerCanTeamSpawn(string teamId)
     {
         if (!IsServerInitialized) return false;
         if (state.Value != MatchState.Live) return false;
 
-        return team switch
+        teamId = NormalizeTeamId(teamId);
+
+        return teamId switch
         {
-            Team.TeamA => reservesA.Value > 0,
-            Team.TeamB => reservesB.Value > 0,
+            TeamAId => reservesA.Value > 0,
+            TeamBId => reservesB.Value > 0,
             _ => false
         };
     }
 
-    public bool TryGetSpawnForTeamAtZone(Team team, int zoneIndex, out Transform spawn)
+    public bool TryGetSpawnForTeamAtZone(string teamId, int zoneIndex, out Transform spawn)
     {
         spawn = null;
 
+        teamId = NormalizeTeamId(teamId);
+
         if (zoneOwners == null) return false;
+        if (zones == null) return false;
         if (zoneIndex < 0 || zoneIndex >= zones.Length) return false;
 
         var z = zones[zoneIndex];
         if (z == null) return false;
 
-        if (zoneOwners[zoneIndex] != team) return false;
+        if (NormalizeTeamId(zoneOwners[zoneIndex]) != teamId) return false;
 
         var spawns = z.Spawns;
         if (spawns == null || spawns.Length == 0) return false;
@@ -168,28 +183,30 @@ public class MatchController : NetworkSingleton<MatchController>
         return spawn != null;
     }
 
-    public Transform GetSpawnForTeam(Team team)
+    public Transform GetSpawnForTeam(string teamId)
     {
-        if (zoneOwners == null) return null;
+        if (zoneOwners == null || zones == null) return null;
 
-        if (team == Team.TeamB)
+        teamId = NormalizeTeamId(teamId);
+
+        if (teamId == TeamBId)
         {
             for (int i = zones.Length - 1; i >= 0; i--)
             {
-                if (zoneOwners[i] == Team.TeamB)
+                if (NormalizeTeamId(zoneOwners[i]) == TeamBId)
                 {
-                    if (TryGetSpawnForTeamAtZone(team, i, out var sp))
+                    if (TryGetSpawnForTeamAtZone(teamId, i, out var sp))
                         return sp;
                 }
             }
         }
-        else if (team == Team.TeamA)
+        else if (teamId == TeamAId)
         {
             for (int i = 0; i < zones.Length; i++)
             {
-                if (zoneOwners[i] == Team.TeamA)
+                if (NormalizeTeamId(zoneOwners[i]) == TeamAId)
                 {
-                    if (TryGetSpawnForTeamAtZone(team, i, out var sp))
+                    if (TryGetSpawnForTeamAtZone(teamId, i, out var sp))
                         return sp;
                 }
             }
@@ -202,15 +219,16 @@ public class MatchController : NetworkSingleton<MatchController>
     {
         if (!IsServerInitialized || player == null) return;
 
-        switch (player.team.Value)
+        string tid = NormalizeTeamId(player.TeamId);
+
+        if (consumeReserve)
         {
-            case Team.TeamA:
-                aliveA.Value = Mathf.Max(0, aliveA.Value + 1);
-                break;
-            case Team.TeamB:
-                aliveB.Value = Mathf.Max(0, aliveB.Value + 1);
-                break;
+            if (tid == TeamAId) reservesA.Value = Mathf.Max(0, reservesA.Value - 1);
+            else if (tid == TeamBId) reservesB.Value = Mathf.Max(0, reservesB.Value - 1);
         }
+
+        if (tid == TeamAId) aliveA.Value = Mathf.Max(0, aliveA.Value + 1);
+        else if (tid == TeamBId) aliveB.Value = Mathf.Max(0, aliveB.Value + 1);
 
         PushCountsImmediate();
         CheckReservesWin();
@@ -220,17 +238,17 @@ public class MatchController : NetworkSingleton<MatchController>
     {
         if (!IsServerInitialized || player == null) return;
 
-        switch (player.team.Value)
-        {
-            case Team.TeamA:
-                aliveA.Value = Mathf.Max(0, aliveA.Value - 1);
-                reservesA.Value = Mathf.Max(0, reservesA.Value - 1);
-                break;
+        string tid = NormalizeTeamId(player.TeamId);
 
-            case Team.TeamB:
-                aliveB.Value = Mathf.Max(0, aliveB.Value - 1);
-                reservesB.Value = Mathf.Max(0, reservesB.Value - 1);
-                break;
+        if (tid == TeamAId)
+        {
+            aliveA.Value = Mathf.Max(0, aliveA.Value - 1);
+            reservesA.Value = Mathf.Max(0, reservesA.Value - 1);
+        }
+        else if (tid == TeamBId)
+        {
+            aliveB.Value = Mathf.Max(0, aliveB.Value - 1);
+            reservesB.Value = Mathf.Max(0, reservesB.Value - 1);
         }
 
         PushCountsImmediate();
@@ -241,18 +259,20 @@ public class MatchController : NetworkSingleton<MatchController>
     {
         if (!IsServerInitialized || pt == null) return;
 
-        switch (pt.team.Value)
-        {
-            case Team.TeamA:
-                aliveA.Value = Mathf.Max(0, aliveA.Value - 1);
-                reservesA.Value = Mathf.Max(0, reservesA.Value - 1);
-                break;
+        string tid = NormalizeTeamId(pt.TeamId);
 
-            case Team.TeamB:
-                aliveB.Value = Mathf.Max(0, aliveB.Value - 1);
-                reservesB.Value = Mathf.Max(0, reservesB.Value - 1);
-                break;
+        if (tid == TeamAId)
+        {
+            aliveA.Value = Mathf.Max(0, aliveA.Value - 1);
+            reservesA.Value = Mathf.Max(0, reservesA.Value - 1);
         }
+        else if (tid == TeamBId)
+        {
+            aliveB.Value = Mathf.Max(0, aliveB.Value - 1);
+            reservesB.Value = Mathf.Max(0, reservesB.Value - 1);
+        }
+
+        RemoveFromTeams(pt);
 
         PushCountsImmediate();
         CheckReservesWin();
@@ -261,6 +281,7 @@ public class MatchController : NetworkSingleton<MatchController>
     private void ApplyZoneBleed(float dt)
     {
         if (bleedReservesPerSecondPerZoneDiff <= 0f) return;
+        if (zones == null || zoneOwners == null) return;
 
         int a = 0;
         int b = 0;
@@ -273,9 +294,9 @@ public class MatchController : NetworkSingleton<MatchController>
             if (!includeUncapturableZonesInBleed && z.Uncapturable)
                 continue;
 
-            Team o = zoneOwners != null ? zoneOwners[i] : z.Owner;
-            if (o == Team.TeamA) a++;
-            else if (o == Team.TeamB) b++;
+            string o = NormalizeTeamId(zoneOwners[i]);
+            if (o == TeamAId) a++;
+            else if (o == TeamBId) b++;
         }
 
         int diff = a - b;
@@ -283,10 +304,8 @@ public class MatchController : NetworkSingleton<MatchController>
 
         float bleed = Mathf.Abs(diff) * bleedReservesPerSecondPerZoneDiff * dt;
 
-        if (diff > 0)
-            _bleedFracB += bleed;
-        else
-            _bleedFracA += bleed;
+        if (diff > 0) _bleedFracB += bleed;
+        else _bleedFracA += bleed;
 
         int drainA = Mathf.FloorToInt(_bleedFracA);
         int drainB = Mathf.FloorToInt(_bleedFracB);
@@ -311,33 +330,28 @@ public class MatchController : NetworkSingleton<MatchController>
         bool aOut = reservesA.Value <= 0;
         bool bOut = reservesB.Value <= 0;
 
-        if (aOut && bOut) EndMatch(Team.None);
-        else if (aOut) EndMatch(Team.TeamB);
-        else if (bOut) EndMatch(Team.TeamA);
-    }
-
-    private void EnsureManagers()
-    {
-        if (teamManager == null)
-            teamManager = GetComponent<TeamManager>() ?? gameObject.AddComponent<TeamManager>();
+        if (aOut && bOut) EndMatch(TeamDatabase.NeutralId);
+        else if (aOut) EndMatch(TeamBId);
+        else if (bOut) EndMatch(TeamAId);
     }
 
     private void PushCountsImmediate()
     {
-        var (a, b) = teamManager != null ? teamManager.GetCounts() : (0, 0);
-        teamACount.Value = a;
-        teamBCount.Value = b;
+        teamACount.Value = _teamAPlayers.Count;
+        teamBCount.Value = _teamBPlayers.Count;
     }
 
     private void PushCountsIfChanged()
     {
-        var (a, b) = teamManager != null ? teamManager.GetCounts() : (0, 0);
+        int a = _teamAPlayers.Count;
+        int b = _teamBPlayers.Count;
         if (teamACount.Value != a) teamACount.Value = a;
         if (teamBCount.Value != b) teamBCount.Value = b;
     }
 
     public int GetZoneIndex(CaptureZone z)
     {
+        if (zones == null) return -1;
         for (int i = 0; i < zones.Length; i++)
             if (zones[i] == z)
                 return i;
@@ -351,10 +365,10 @@ public class MatchController : NetworkSingleton<MatchController>
         int index = GetZoneIndex(z);
         if (index < 0) return;
 
-        zoneOwners[index] = z.Owner;
+        zoneOwners[index] = NormalizeTeamId(z.TeamOwnerId);
     }
 
-    private void EndMatch(Team winner)
+    private void EndMatch(string winnerTeamId)
     {
         if (state.Value == MatchState.PostRound) return;
 
@@ -362,7 +376,7 @@ public class MatchController : NetworkSingleton<MatchController>
             ph.CancelRespawn();
 
         state.Value = MatchState.PostRound;
-        Rpc_OnMatchEnded(winner);
+        Rpc_OnMatchEnded(winnerTeamId);
 
         StartCoroutine(IntermissionThenRestart());
     }
@@ -397,18 +411,26 @@ public class MatchController : NetworkSingleton<MatchController>
         _bleedFracA = 0f;
         _bleedFracB = 0f;
 
-        for (int i = 0; i < zones.Length; i++)
+        if (zones != null)
         {
-            if (zones[i] == null) continue;
-            zones[i].ResetZone();
-            zoneOwners[i] = zones[i].InitialOwner;
-            zoneSpawnIndices[i] = 0;
+            for (int i = 0; i < zones.Length; i++)
+            {
+                if (zones[i] == null) continue;
+                zones[i].ResetZone();
+                zoneOwners[i] = NormalizeTeamId(zones[i].InitialOwnerId);
+                zoneSpawnIndices[i] = 0;
+            }
         }
+
+        RebuildTeamMembership();
+        PushCountsImmediate();
 
         var teams = FindObjectsByType<PlayerTeam>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
         foreach (var pt in teams)
         {
-            var spawn = GetSpawnForTeam(pt.team.Value);
+            if (pt == null) continue;
+
+            var spawn = GetSpawnForTeam(pt.TeamId);
             if (spawn == null) continue;
 
             var ph = pt.GetComponent<PlayerHealth>();
@@ -435,29 +457,86 @@ public class MatchController : NetworkSingleton<MatchController>
 
         if (pt == null || animDriver == null) return;
 
-        Team team = pt.team.Value;
+        string teamId = NormalizeTeamId(pt.TeamId);
         Vector3 pos = ph.transform.position;
         Quaternion rot = ph.transform.rotation;
         string deathAnim = animDriver.lastDeathAnim;
 
-        RpcSpawnCorpse(team, pos, rot, deathAnim);
+        RpcSpawnCorpse(teamId, pos, rot, deathAnim);
     }
 
     [ObserversRpc(BufferLast = false)]
-    private void RpcSpawnCorpse(Team team, Vector3 pos, Quaternion rot, string deathAnim)
+    private void RpcSpawnCorpse(string teamId, Vector3 pos, Quaternion rot, string deathAnim)
     {
-        GameObject prefab = null;
+        var db = TeamDatabase.Instance;
+        if (db == null) return;
 
-        if (team == Team.TeamA) prefab = montenegrinCorpsePrefab;
-        else if (team == Team.TeamB) prefab = ottomanCorpsePrefab;
+        var def = db.Get(teamId);
+        if (def == null) return;
 
-        if (prefab == null) return;
+        if (universalCorpsePrefab == null) return;
 
-        GameObject corpse = Instantiate(prefab, pos, rot);
+        GameObject corpse = Instantiate(universalCorpsePrefab, pos, rot);
         corpse.transform.SetParent(null, true);
 
-        Animator anim = corpse.GetComponentInChildren<Animator>();
-        if (anim != null)
+        Transform modelRoot = corpse.transform.Find("ModelRoot");
+        if (modelRoot == null) modelRoot = corpse.transform;
+
+        Transform weaponRoot = corpse.transform.Find("WeaponRoot");
+        if (weaponRoot == null) weaponRoot = modelRoot;
+
+        GameObject modelInstance = null;
+        GameObject weaponInstance = null;
+
+        if (!string.IsNullOrWhiteSpace(def.ModelKey))
+        {
+            var modelPrefab = Resources.Load<GameObject>(def.ModelKey);
+            if (modelPrefab != null)
+            {
+                modelInstance = Instantiate(modelPrefab, modelRoot);
+                modelInstance.transform.localPosition = Vector3.zero;
+                modelInstance.transform.localRotation = Quaternion.identity;
+                modelInstance.transform.localScale = Vector3.one;
+            }
+        }
+
+        Transform weaponParent = weaponRoot;
+
+        if (modelInstance != null && !string.IsNullOrWhiteSpace(def.WeaponSocketPath))
+        {
+            var socket = modelInstance.transform.Find(def.WeaponSocketPath);
+            if (socket != null)
+                weaponParent = socket;
+        }
+
+        if (!string.IsNullOrWhiteSpace(def.WeaponKey))
+        {
+            var weaponPrefab = Resources.Load<GameObject>(def.WeaponKey);
+            if (weaponPrefab != null)
+            {
+                weaponInstance = Instantiate(weaponPrefab, weaponParent);
+                weaponInstance.transform.localPosition = Vector3.zero;
+                weaponInstance.transform.localRotation = Quaternion.identity;
+                weaponInstance.transform.localScale = Vector3.one;
+            }
+        }
+
+        Animator anim = null;
+
+        if (modelInstance != null)
+        {
+            if (!string.IsNullOrWhiteSpace(def.AnimatorPath))
+            {
+                var t = modelInstance.transform.Find(def.AnimatorPath);
+                if (t != null)
+                    anim = t.GetComponent<Animator>() ?? t.GetComponentInChildren<Animator>(true);
+            }
+
+            if (anim == null)
+                anim = modelInstance.GetComponentInChildren<Animator>(true);
+        }
+
+        if (anim != null && !string.IsNullOrWhiteSpace(deathAnim))
         {
             anim.Play(deathAnim, 0, 1f);
             anim.Update(0f);
@@ -478,10 +557,10 @@ public class MatchController : NetworkSingleton<MatchController>
     }
 
     [ObserversRpc]
-    private void Rpc_OnMatchEnded(Team winner)
+    private void Rpc_OnMatchEnded(string winnerTeamId)
     {
         if (hud != null)
-            hud.ShowVictory(winner);
+            hud.ShowVictory(winnerTeamId);
     }
 
     [ObserversRpc]
@@ -489,5 +568,37 @@ public class MatchController : NetworkSingleton<MatchController>
     {
         if (hud != null)
             hud.HideVictory();
+    }
+
+    private void RebuildTeamMembership()
+    {
+        _teamAPlayers.Clear();
+        _teamBPlayers.Clear();
+
+        var all = FindObjectsByType<PlayerTeam>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+        foreach (var pt in all)
+        {
+            if (pt == null) continue;
+            string tid = NormalizeTeamId(pt.TeamId);
+            if (tid == TeamAId) _teamAPlayers.Add(pt);
+            else if (tid == TeamBId) _teamBPlayers.Add(pt);
+        }
+    }
+
+    private void RemoveFromTeams(PlayerTeam player)
+    {
+        if (player == null) return;
+        _teamAPlayers.Remove(player);
+        _teamBPlayers.Remove(player);
+    }
+
+    private static string NormalizeTeamId(string id)
+    {
+        if (string.IsNullOrWhiteSpace(id)) return TeamDatabase.NeutralId;
+
+        var db = TeamDatabase.Instance;
+        if (db == null) return id;
+
+        return db.IsValidTeamId(id) ? id : TeamDatabase.NeutralId;
     }
 }

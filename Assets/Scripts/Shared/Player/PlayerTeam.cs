@@ -1,44 +1,52 @@
-using UnityEngine;
 using FishNet.Object;
 using FishNet.Object.Synchronizing;
 
-public enum Team { None, TeamA, TeamB }
-
 public class PlayerTeam : NetworkBehaviour
 {
-    public readonly SyncVar<Team> team = new();
+    public readonly SyncVar<string> teamId = new(TeamDatabase.NeutralId);
 
     private readonly SyncVar<int> preferredSpawnZoneIndex = new(-1);
     public int PreferredSpawnZoneIndex => preferredSpawnZoneIndex.Value;
+
+    public string TeamId => teamId.Value;
 
     public override void OnStartServer()
     {
         base.OnStartServer();
         preferredSpawnZoneIndex.Value = -1;
+        teamId.Value = TeamDatabase.NeutralId;
     }
 
     [ServerRpc(RequireOwnership = true)]
-    public void JoinTeam(Team desired)
+    public void JoinTeam(string desiredTeamId)
     {
         if (!IsServerInitialized) return;
-        if (desired == Team.None) return;
-        if (team.Value == desired) return;
+        if (string.IsNullOrWhiteSpace(desiredTeamId)) return;
+        if (desiredTeamId == TeamDatabase.NeutralId) return;
+        if (teamId.Value == desiredTeamId) return;
+
+        var db = TeamDatabase.Instance;
+        if (db == null || !db.IsValidTeamId(desiredTeamId)) return;
 
         preferredSpawnZoneIndex.Value = -1;
 
         if (MatchController.TryGet(out var match))
-            match.ServerJoinTeam(this, desired);
+            match.ServerJoinTeam(this, desiredTeamId);
     }
 
-    public void ServerSetTeam(Team desired)
+    public void ServerSetTeamId(string desiredTeamId)
     {
         if (!IsServerInitialized) return;
-        if (desired == Team.None) return;
+        if (string.IsNullOrWhiteSpace(desiredTeamId)) return;
+        if (desiredTeamId == TeamDatabase.NeutralId) return;
+
+        var db = TeamDatabase.Instance;
+        if (db == null || !db.IsValidTeamId(desiredTeamId)) return;
 
         preferredSpawnZoneIndex.Value = -1;
 
         if (MatchController.TryGet(out var match))
-            match.ServerJoinTeam(this, desired);
+            match.ServerJoinTeam(this, desiredTeamId);
     }
 
     [ServerRpc(RequireOwnership = true)]
@@ -60,8 +68,8 @@ public class PlayerTeam : NetworkBehaviour
         var z = match.zones[zoneIndex];
         if (z == null) return;
 
-        if (team.Value == Team.None) return;
-        if (z.Owner != team.Value) return;
+        if (string.IsNullOrWhiteSpace(teamId.Value) || teamId.Value == TeamDatabase.NeutralId) return;
+        if (z.TeamOwnerId != teamId.Value) return;
 
         var spawns = z.Spawns;
         if (spawns == null || spawns.Length == 0) return;
@@ -75,7 +83,7 @@ public class PlayerTeam : NetworkBehaviour
 
         if (MatchController.TryGet(out var match))
         {
-            if (team.Value != Team.None)
+            if (!string.IsNullOrWhiteSpace(teamId.Value) && teamId.Value != TeamDatabase.NeutralId)
             {
                 var tm = match.GetComponent<TeamManager>();
                 if (tm != null) tm.Leave(this);

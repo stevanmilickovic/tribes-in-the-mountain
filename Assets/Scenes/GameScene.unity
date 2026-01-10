@@ -1742,20 +1742,18 @@ MonoBehaviour:
   _networkObjectCache: {fileID: 0}
   maxTeamA: 5
   maxTeamB: 10
-  teamManager: {fileID: 369706149}
   roundSeconds: 300
   intermissionSeconds: 5
   startingReservesTeamA: 10
   startingReservesTeamB: 20
   includeUncapturableZonesInBleed: 0
   bleedReservesPerSecondPerZoneDiff: 0.2
-  montenegrinCorpsePrefab: {fileID: 7539718774427416911, guid: 47cad4a8e88c21741ac8bd0cffb9e1bf, type: 3}
-  ottomanCorpsePrefab: {fileID: 7482308203535832165, guid: c117d6d0873c1c64b861c8b34b625484, type: 3}
   zones:
   - {fileID: 1120609071}
   - {fileID: 1042012360}
   - {fileID: 478417483}
-  hud: {fileID: 0}
+  universalCorpsePrefab: {fileID: 7539718774427416911, guid: fcf2b1e11a15dc74aaf73311db18f105, type: 3}
+  hud: {fileID: 1192467977}
 --- !u!1 &382252660
 GameObject:
   m_ObjectHideFlags: 0
@@ -2316,7 +2314,7 @@ MonoBehaviour:
   radius: 10
   captureRatePerSecond: 0.3
   decayPerSecond: 0.1
-  initialOwner: 2
+  initialOwnerId: team_b
   uncapturable: 1
   spawnPoints:
   - {fileID: 2038803270}
@@ -3366,6 +3364,50 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 50, y: -30, z: 0}
+--- !u!1 &714313740
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 714313742}
+  - component: {fileID: 714313741}
+  m_Layer: 0
+  m_Name: TeamDatabase
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &714313741
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 714313740}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1476bb60dab57b346be1b6fdc3479e2a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!4 &714313742
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 714313740}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 581.2028, y: 323.57278, z: -1.679455}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &728960640
 GameObject:
   m_ObjectHideFlags: 0
@@ -3531,7 +3573,7 @@ MonoBehaviour:
   radius: 5
   captureRatePerSecond: 0.15
   decayPerSecond: 0.1
-  initialOwner: 1
+  initialOwnerId: none
   uncapturable: 0
   spawnPoints: []
 --- !u!135 &780629074
@@ -4882,7 +4924,7 @@ MonoBehaviour:
   radius: 10
   captureRatePerSecond: 0.3
   decayPerSecond: 0.1
-  initialOwner: 0
+  initialOwnerId: none
   uncapturable: 0
   spawnPoints:
   - {fileID: 620022417}
@@ -5395,7 +5437,7 @@ MonoBehaviour:
   radius: 10
   captureRatePerSecond: 0.15
   decayPerSecond: 0.1
-  initialOwner: 1
+  initialOwnerId: team_a
   uncapturable: 1
   spawnPoints:
   - {fileID: 1546443794}
@@ -5554,8 +5596,6 @@ MonoBehaviour:
   teamBZonesText: {fileID: 0}
   bleedStatusText: {fileID: 0}
   includeUncapturableZonesInBleedUI: 0
-  teamAName: Team A
-  teamBName: Team B
   zoneProgressText: {fileID: 969700223}
   zoneCapturingText: {fileID: 1797670466}
   tribesVictoryPanel: {fileID: 1908769962}
@@ -6942,8 +6982,7 @@ MonoBehaviour:
   _componentIndexCache: 255
   _addedNetworkObject: {fileID: 1296566438}
   _networkObjectCache: {fileID: 0}
-  teamAPlayerPrefab: {fileID: 1715684365727957010, guid: ea2c0cfb1227e7e468312b9f03cfb552, type: 3}
-  teamBPlayerPrefab: {fileID: 4499703010273450316, guid: 5967ed408007ef541b05f89e0803055c, type: 3}
+  playerPrefab: {fileID: 1715684365727957010, guid: 265b8826d6d58194b858e368a35b5ff6, type: 3}
 --- !u!4 &1296566440
 Transform:
   m_ObjectHideFlags: 0
@@ -10625,3 +10664,4 @@ SceneRoots:
   - {fileID: 1443399074}
   - {fileID: 1246264656}
   - {fileID: 794195318}
+  - {fileID: 714313742}

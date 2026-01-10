@@ -13,32 +13,58 @@ public class PlayerAnimationDriver : NetworkBehaviour
 
     private float _aimWeight;
     private bool _wasAiming;
-    private Vector3 _lastPos;
-    private bool _hasLast;
-    private bool wasDead;
+    private bool _wasDead;
 
     public string lastDeathAnim;
 
+    private PlayerAudio _audio;
+
+    private void Awake()
+    {
+        if (motor == null) motor = GetComponent<PlayerMotor>();
+        if (inputs == null) inputs = GetComponent<PlayerInputs>();
+        if (health == null) health = GetComponent<PlayerHealth>();
+        _audio = GetComponent<PlayerAudio>();
+    }
+
+    public void BindAnimator(Animator newAnimator)
+    {
+        anim = newAnimator;
+
+        _aimWeight = 0f;
+        _wasAiming = false;
+
+        if (anim != null)
+        {
+            if (aimLayerIndex >= 0 && aimLayerIndex < anim.layerCount)
+                anim.SetLayerWeight(aimLayerIndex, 0f);
+        }
+    }
+
     private void LateUpdate()
     {
-        if (anim == null || motor == null) return;
+        if (motor == null || health == null) return;
+        if (anim == null) return;
 
         if (!health.IsAlive)
         {
-            wasDead = true;
+            if (!_wasDead)
+            {
+                if (motor.IsProneNet.Value) lastDeathAnim = "DeathProne";
+                else if (motor.IsCrouchingNet.Value) lastDeathAnim = "DeathCrouched";
+                else if (motor.PredictedVelocity.magnitude > 2f) lastDeathAnim = "DeathRun";
+                else lastDeathAnim = "DeathStanding";
 
-            if (motor.IsProneNet.Value) lastDeathAnim = "DeathProne";
-            else if (motor.IsCrouchingNet.Value) lastDeathAnim = "DeathCrouched";
-            else if (motor.PredictedVelocity.magnitude > 2f) lastDeathAnim = "DeathRun";
-            else lastDeathAnim = "DeathStanding";
+                anim.SetTrigger("Death");
+                _wasDead = true;
+            }
 
-            anim.SetTrigger("Death");
             return;
         }
 
-        if (health.IsAlive && wasDead)
+        if (_wasDead)
         {
-            wasDead = false;
+            _wasDead = false;
             anim.SetBool("Death", false);
             anim.SetTrigger("Reset");
         }
@@ -71,8 +97,7 @@ public class PlayerAnimationDriver : NetworkBehaviour
 
     private void HandleAudio(float speed)
     {
-        var audio = motor.GetComponent<PlayerAudio>();
-        if (audio == null) return;
+        if (_audio == null) return;
 
         bool grounded = motor.IsGrounded;
         bool moving = speed > 0.1f;
@@ -82,17 +107,17 @@ public class PlayerAnimationDriver : NetworkBehaviour
         if (grounded && moving)
         {
             if (prone)
-                audio.PlayCrawlLoop();
+                _audio.PlayCrawlLoop();
             else if (!crouch)
-                audio.PlayFootstepLoop();
+                _audio.PlayFootstepLoop();
             else
-                audio.StopMovementLoop();
+                _audio.StopMovementLoop();
         }
         else
         {
-            if (audio.source.isPlaying && (audio.source.clip == audio.footstep || audio.source.clip == audio.crawl))
-                audio.StopMovementLoop();
+            if (_audio.source != null && _audio.source.isPlaying &&
+                (_audio.source.clip == _audio.footstep || _audio.source.clip == _audio.crawl))
+                _audio.StopMovementLoop();
         }
     }
-
 }

@@ -12,8 +12,8 @@ public class TeamSelectUI : MonoBehaviour
 
     private void Awake()
     {
-        teamAButton.onClick.AddListener(() => Submit(Team.TeamA));
-        teamBButton.onClick.AddListener(() => Submit(Team.TeamB));
+        if (teamAButton != null) teamAButton.onClick.AddListener(() => Submit(MatchController.TeamAId));
+        if (teamBButton != null) teamBButton.onClick.AddListener(() => Submit(MatchController.TeamBId));
         SetInteractable(false);
     }
 
@@ -23,17 +23,20 @@ public class TeamSelectUI : MonoBehaviour
             gateway = FindObjectOfType<LobbySelectionGateway>();
 
         bool ready = InstanceFinder.IsClientStarted && gateway != null && gateway.IsClientInitialized;
-        if (teamAButton.interactable != ready) SetInteractable(ready);
+        if (teamAButton != null && teamAButton.interactable != ready) SetInteractable(ready);
     }
 
-    private void Submit(Team t)
+    private void Submit(string teamId)
     {
         if (!InstanceFinder.IsClientStarted) return;
         if (gateway == null || !gateway.IsClientInitialized) return;
+        if (string.IsNullOrWhiteSpace(teamId)) return;
 
-        gateway.SubmitTeamChoice(t);
+        gateway.SubmitTeamChoice(teamId);
+
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
+
         if (rootPanel != null) rootPanel.SetActive(false);
     }
 

@@ -15,8 +15,6 @@ public class HUDController : MonoBehaviour
     [SerializeField] private TextMeshProUGUI teamBZonesText;
     [SerializeField] private TextMeshProUGUI bleedStatusText;
     [SerializeField] private bool includeUncapturableZonesInBleedUI = false;
-    [SerializeField] private string teamAName = "Team A";
-    [SerializeField] private string teamBName = "Team B";
 
     [Header("Capture UI")]
     [SerializeField] private TextMeshProUGUI zoneProgressText;
@@ -39,7 +37,8 @@ public class HUDController : MonoBehaviour
 
     private void Awake()
     {
-        MatchController.Instance.hud = this;
+        if (MatchController.Instance != null)
+            MatchController.Instance.hud = this;
     }
 
     private void Update()
@@ -107,8 +106,8 @@ public class HUDController : MonoBehaviour
                 if (!z) continue;
                 if (!includeUncapturableZonesInBleedUI && z.Uncapturable) continue;
 
-                if (z.Owner == Team.TeamA) a++;
-                else if (z.Owner == Team.TeamB) b++;
+                if (z.TeamOwnerId == MatchController.TeamAId) a++;
+                else if (z.TeamOwnerId == MatchController.TeamBId) b++;
             }
         }
 
@@ -117,10 +116,27 @@ public class HUDController : MonoBehaviour
 
         if (bleedStatusText != null)
         {
-            if (a == b) SetBleedText("");
-            else if (a > b) SetBleedText($"{teamBName} bleeding reserves");
-            else SetBleedText($"{teamAName} bleeding reserves");
+            if (a == b)
+            {
+                SetBleedText("");
+                return;
+            }
+
+            string aName = GetTeamName(MatchController.TeamAId, "Team A");
+            string bName = GetTeamName(MatchController.TeamBId, "Team B");
+
+            if (a > b) SetBleedText($"{bName} bleeding reserves");
+            else SetBleedText($"{aName} bleeding reserves");
         }
+    }
+
+    private string GetTeamName(string teamId, string fallback)
+    {
+        var db = TeamDatabase.Instance;
+        if (db != null && db.TryGet(teamId, out var t) && t != null && !string.IsNullOrWhiteSpace(t.DisplayName))
+            return t.DisplayName;
+
+        return fallback;
     }
 
     private void SetBleedText(string s)
@@ -131,13 +147,13 @@ public class HUDController : MonoBehaviour
         bleedStatusText.gameObject.SetActive(!string.IsNullOrWhiteSpace(s));
     }
 
-    public void ShowVictory(Team winner)
+    public void ShowVictory(string winnerTeamId)
     {
         if (tribesVictoryPanel != null) tribesVictoryPanel.SetActive(false);
         if (ottomansVictoryPanel != null) ottomansVictoryPanel.SetActive(false);
 
-        if (winner == Team.TeamA) tribesVictoryPanel?.SetActive(true);
-        else if (winner == Team.TeamB) ottomansVictoryPanel?.SetActive(true);
+        if (winnerTeamId == MatchController.TeamAId) tribesVictoryPanel?.SetActive(true);
+        else if (winnerTeamId == MatchController.TeamBId) ottomansVictoryPanel?.SetActive(true);
 
         if (zoneCapturingText != null) zoneCapturingText.SetActive(false);
         SetBleedText("");

@@ -1,6 +1,5 @@
 using UnityEngine;
 using FishNet.Object;
-using Cinemachine;
 
 public class CameraBinder : NetworkBehaviour
 {
@@ -11,34 +10,46 @@ public class CameraBinder : NetworkBehaviour
     public Transform playerObj;
     public Transform targetObj;
 
+    private ThirdPersonCam _cam;
+
     public override void OnStartClient()
     {
+        base.OnStartClient();
+
         if (!IsOwner)
             return;
 
+        if (playerInputs == null) playerInputs = GetComponent<PlayerInputs>();
+        if (playerMotor == null) playerMotor = GetComponent<PlayerMotor>();
+
         Camera mainCam = Camera.main;
         if (mainCam == null)
-        {
             return;
-        }
 
-        ThirdPersonCam cam = mainCam.GetComponent<ThirdPersonCam>();
-        if (cam == null)
-        {
+        _cam = mainCam.GetComponent<ThirdPersonCam>();
+        if (_cam == null)
             return;
-        }
 
-        cam.SetPlayerInfo(transform, orientation, playerObj);
+        Bind();
 
         if (playerInputs != null)
-            playerInputs.cameraRig = cam;
+            playerInputs.cameraRig = _cam;
 
-        AimTargetController atc = mainCam.GetComponent<AimTargetController>();
-
+        var atc = mainCam.GetComponent<AimTargetController>();
         if (atc != null)
         {
             atc.playerMotor = playerMotor;
             atc.target = targetObj;
         }
+    }
+
+    public void Bind()
+    {
+        if (!IsOwner) return;
+        if (_cam == null) return;
+        if (orientation == null) return;
+
+        Transform follow = playerObj != null ? playerObj : transform;
+        _cam.SetPlayerInfo(transform, orientation, follow);
     }
 }

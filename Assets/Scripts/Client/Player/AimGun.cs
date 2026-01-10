@@ -3,24 +3,27 @@ using FishNet.Object;
 
 public class AimGun : NetworkBehaviour
 {
-    public Transform aimTransform, bone;
+    public Transform aimTransform;
+    public Transform bone;
     public Vector3 targetPosition;
     public PlayerMotor playerMotor;
     public int iterations = 10;
     [Range(0, 1)] public float weight = 1;
-    public bool DoGunAim;
 
     private Vector3 _remoteTargetPos;
     private float _nextAimSend;
 
     void LateUpdate()
     {
-        DoGunAim = playerMotor.IsAiming.Value;
-        if (!DoGunAim) return;
+        if (playerMotor == null) return;
+        if (!playerMotor.IsAiming.Value) return;
+        if (bone == null || aimTransform == null) return;
 
         if (playerMotor.IsOwner)
         {
-            targetPosition = playerMotor.target.position;
+            if (playerMotor.target != null)
+                targetPosition = playerMotor.target.position;
+
             AimAtTarget(bone, targetPosition, weight);
 
             if (IsSpawned && Time.time >= _nextAimSend)
@@ -36,6 +39,15 @@ public class AimGun : NetworkBehaviour
         }
     }
 
+    public void BindAimRig(PlayerMotor motor, Transform newAimTransform, Transform newBone)
+    {
+        if (motor != null)
+            playerMotor = motor;
+
+        aimTransform = newAimTransform;
+        bone = newBone;
+    }
+
     [ServerRpc(RequireOwnership = true)]
     private void RpcSendTargetPos(Vector3 pos)
     {
@@ -48,15 +60,20 @@ public class AimGun : NetworkBehaviour
         _remoteTargetPos = pos;
     }
 
-    private void AimAtTarget(Transform bone, Vector3 targetPos, float w)
+    private void AimAtTarget(Transform b, Vector3 targetPos, float w)
     {
+        if (b == null || aimTransform == null) return;
+
+        Vector3 origin = aimTransform.position;
+        Vector3 targetDirection = targetPos - origin;
+        if (targetDirection.sqrMagnitude < 0.000001f) return;
+
         for (int i = 0; i < iterations; i++)
         {
             Vector3 aimDirection = aimTransform.forward;
-            Vector3 targetDirection = targetPos - aimTransform.position;
             Quaternion aimTowards = Quaternion.FromToRotation(aimDirection, targetDirection);
             Quaternion blendedRotation = Quaternion.Slerp(Quaternion.identity, aimTowards, (w / iterations) * 3.5f);
-            bone.rotation = blendedRotation * bone.rotation;
+            b.rotation = blendedRotation * b.rotation;
         }
     }
 }

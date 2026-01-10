@@ -9,9 +9,17 @@ public class PlayerAudio : MonoBehaviour
     public AudioClip ruffle;
     public AudioClip musket;
 
+    public void BindMuzzleSource(AudioSource newMuzzleSource)
+    {
+        if (newMuzzleSource != null)
+            muzzleSource = newMuzzleSource;
+    }
+
     public void PlayFootstepLoop()
     {
-        if ((!source.isPlaying) || source.clip != footstep)
+        if (source == null || footstep == null) return;
+
+        if (!source.isPlaying || source.clip != footstep)
         {
             source.clip = footstep;
             source.loop = true;
@@ -22,32 +30,40 @@ public class PlayerAudio : MonoBehaviour
 
     public void PlayCrawlLoop()
     {
-        if ((!source.isPlaying) || source.clip != crawl)
+        if (source == null || crawl == null) return;
+
+        if (!source.isPlaying || source.clip != crawl)
         {
             source.clip = crawl;
             source.loop = true;
+            source.pitch = 1f;
             source.Play();
         }
     }
 
-
     public void StopMovementLoop()
     {
+        if (source == null) return;
+
         if (source.isPlaying && (source.clip == footstep || source.clip == crawl))
             source.Stop();
     }
 
     public void PlayRuffle()
     {
+        if (source == null || ruffle == null) return;
+
         source.loop = false;
-        if (ruffle)
-            source.PlayOneShot(ruffle);
+        source.PlayOneShot(ruffle);
     }
 
     public void PlayShot()
     {
-        muzzleSource.loop = false;
+        var s = muzzleSource != null ? muzzleSource : source;
+        if (s == null) return;
+
+        s.loop = false;
         if (musket)
-            muzzleSource.PlayOneShot(musket);
+            s.PlayOneShot(musket);
     }
 }

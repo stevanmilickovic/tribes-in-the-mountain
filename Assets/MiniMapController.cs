@@ -16,7 +16,7 @@ public class MiniMapController : NetworkBehaviour
     [SerializeField] private RectTransform teammateIconPrefab;
     [SerializeField] private RectTransform zoneIconPrefab;
 
-    [Header("Zone Sprites")]
+    [Header("Zone Sprites (fallback)")]
     [SerializeField] private Sprite flagTeamA;
     [SerializeField] private Sprite flagTeamB;
     [SerializeField] private Sprite flagNeutral;
@@ -185,11 +185,13 @@ public class MiniMapController : NetworkBehaviour
         }
 
         var desired = new HashSet<PlayerTeam>();
+        string myId = localTeam.TeamId;
+
         foreach (var t in all)
         {
             if (t == null) continue;
             if (t == localTeam) continue;
-            if (t.team.Value != localTeam.team.Value) continue;
+            if (t.TeamId != myId) continue;
             desired.Add(t);
         }
 
@@ -256,21 +258,15 @@ public class MiniMapController : NetworkBehaviour
 
     private void OnZoneClicked(CaptureZone z)
     {
-        Debug.Log("Zone clicked");
-
         if (z == null || localTeam == null) return;
-        Debug.Log("Passed test 1");
 
         var mc = MatchController.Instance;
         if (mc == null) return;
-        Debug.Log("Passed test 2");
 
         int zi = mc.GetZoneIndex(z);
         if (zi < 0) return;
-        Debug.Log("Passed test 3");
 
-        if (z.Owner != localTeam.team.Value) return;
-        Debug.Log("Passed test 4");
+        if (z.TeamOwnerId != localTeam.TeamId) return;
 
         if (selectedZoneIndex == zi)
             selectedZoneIndex = -1;
@@ -278,16 +274,10 @@ public class MiniMapController : NetworkBehaviour
             selectedZoneIndex = zi;
 
         if (localHealth != null)
-        {
             localHealth.SetPreferredSpawnZone(selectedZoneIndex);
-            Debug.Log("Set preferred spawn zone to " + selectedZoneIndex);
-        }
 
         if (localHealth != null && !localHealth.IsAlive && selectedZoneIndex >= 0)
-        {
             localHealth.RequestRespawnNow();
-            Debug.Log("Requested respawn now");
-        }
     }
 
     private Vector2 WorldToMapPosition(Vector3 world)
@@ -338,7 +328,7 @@ public class MiniMapController : NetworkBehaviour
 
             var img = tr.GetComponent<Image>();
             if (img != null)
-                img.sprite = GetZoneSprite(z.Owner);
+                img.sprite = GetZoneSprite(z.TeamOwnerId);
 
             int zi = -1;
             var mc = MatchController.Instance;
@@ -357,14 +347,19 @@ public class MiniMapController : NetworkBehaviour
         }
     }
 
-    private Sprite GetZoneSprite(Team owner)
+    private Sprite GetZoneSprite(string ownerTeamId)
     {
-        return owner switch
-        {
-            Team.TeamA => flagTeamA,
-            Team.TeamB => flagTeamB,
-            _ => flagNeutral
-        };
+        if (string.IsNullOrWhiteSpace(ownerTeamId) || ownerTeamId == TeamDatabase.NeutralId)
+            return flagNeutral;
+
+        var db = TeamDatabase.Instance;
+        if (db != null && db.TryGet(ownerTeamId, out var t) && t != null && t.FlagSprite != null)
+            return t.FlagSprite;
+
+        if (ownerTeamId == MatchController.TeamAId) return flagTeamA;
+        if (ownerTeamId == MatchController.TeamBId) return flagTeamB;
+
+        return flagNeutral;
     }
 
     private void OnApplicationFocus(bool hasFocus)

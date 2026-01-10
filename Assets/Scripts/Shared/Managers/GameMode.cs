@@ -18,8 +18,10 @@ public class GameMode : NetworkBehaviour
     public override void OnStartServer()
     {
         base.OnStartServer();
+
         teams = GetComponent<TeamManager>();
         if (teams == null) teams = gameObject.AddComponent<TeamManager>();
+
         remainingSeconds.Value = 600;
         teamACount.Value = 0;
         teamBCount.Value = 0;
@@ -28,6 +30,7 @@ public class GameMode : NetworkBehaviour
     private void Update()
     {
         if (!IsServerInitialized) return;
+
         accumulated += Time.deltaTime;
         if (accumulated >= 1f)
         {
@@ -35,7 +38,8 @@ public class GameMode : NetworkBehaviour
             remainingSeconds.Value -= 1;
             if (remainingSeconds.Value <= 0) remainingSeconds.Value = 600;
         }
-        var counts = teams != null ? teams.GetCounts() : (0, 0);
+
+        var counts = teams != null ? teams.GetCountsAB() : (0, 0);
         if (teamACount.Value != counts.Item1) teamACount.Value = counts.Item1;
         if (teamBCount.Value != counts.Item2) teamBCount.Value = counts.Item2;
     }

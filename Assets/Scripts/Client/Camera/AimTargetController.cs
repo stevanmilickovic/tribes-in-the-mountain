@@ -1,5 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 public class AimTargetController : MonoBehaviour
@@ -31,7 +29,8 @@ public class AimTargetController : MonoBehaviour
         Ray ray = cam.ViewportPointToRay(new Vector3(0.5f, 0.5f));
         if (Physics.Raycast(ray, out RaycastHit hit, maxDistance, hitMask, QueryTriggerInteraction.Ignore))
         {
-            if (hit.distance > minDistance)
+            float d = hit.distance;
+            if (d > minDistance)
                 target.position = hit.point;
             else
                 target.position = cam.transform.position + cam.transform.forward * minDistance;
@@ -40,5 +39,11 @@ public class AimTargetController : MonoBehaviour
         {
             target.position = cam.transform.position + cam.transform.forward * maxDistance;
         }
+    }
+
+    public void Bind(PlayerMotor motor, Transform targetTransform)
+    {
+        playerMotor = motor;
+        target = targetTransform;
     }
 }
