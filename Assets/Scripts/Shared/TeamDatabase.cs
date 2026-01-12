@@ -10,10 +10,10 @@ public class TeamDatabase : MonoBehaviour
     private readonly List<Team> _teams = new();
     private readonly Dictionary<string, Team> _byId = new();
 
-    private const string DefaultAimBonePath = "metarig/spine/spine.001";
-    private const string DefaultWeaponSocketPath = "metarig/spine/spine.001/spine.002/spine.003/shoulder.R/upper_arm.R/forearm.R/hand.R";
-    private const string DefaultMuzzlePath = "Muzzle";
-    private const string DefaultAimTransformPath = "RaycastObject";
+    private const string DefaultAimBonePath = "model/metarig/spine/spine.001";
+    private const string DefaultWeaponSocketPath = "model/metarig/spine/spine.001/spine.002/spine.003/shoulder.R/upper_arm.R/forearm.R/hand.R";
+    private const string DefaultMuzzlePath = "model/Muzzle";
+    private const string DefaultAimTransformPath = "model/RaycastObject";
 
     public IReadOnlyList<Team> Teams => _teams;
 
@@ -57,7 +57,7 @@ public class TeamDatabase : MonoBehaviour
             Id = "team_a",
             DisplayName = "Team A",
 
-            ModelKey = "Tribes/Model",
+            ModelKey = "Tribes/Model2",
             WeaponKey = "Jeferdar",
 
             AnimatorPath = "",
@@ -74,7 +74,7 @@ public class TeamDatabase : MonoBehaviour
             Id = "team_b",
             DisplayName = "Team B",
 
-            ModelKey = "Ottomans/Model",
+            ModelKey = "Tribes/Model2",
             WeaponKey = "Jeferdar",
 
             AnimatorPath = "",
