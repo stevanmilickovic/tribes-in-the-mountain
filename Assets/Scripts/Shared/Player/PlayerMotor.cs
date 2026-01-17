@@ -159,6 +159,11 @@ public class PlayerMotor : TickNetworkBehaviour
     [Replicate]
     private void PerformReplicate(InputData rd, ReplicateState state = ReplicateState.Invalid, Channel channel = Channel.Unreliable)
     {
+        bool effectiveAimHeld = rd.AimHeld && !_isReloading;
+
+        InputData simRd = rd;
+        simRd.AimHeld = effectiveAimHeld;
+
         if (IsServerInitialized)
         {
             IsCrouchingNet.Value = _isCrouching;
@@ -166,18 +171,21 @@ public class PlayerMotor : TickNetworkBehaviour
             SpeedNet.Value = _pred.Rigidbody.velocity.magnitude;
             IsReloadingNet.Value = _isReloading;
             HasAmmoNet.Value = _hasAmmo;
-            if (IsAiming.Value != rd.AimHeld)
-                IsAiming.Value = rd.AimHeld;
+
+            if (IsAiming.Value != effectiveAimHeld)
+                IsAiming.Value = effectiveAimHeld;
         }
 
-        movement.SimulateStance(rd, ref _isCrouching, ref _isProne);
-        if (rd.CrouchPressedEdge || rd.PronePressedEdge)
+        movement.SimulateStance(simRd, ref _isCrouching, ref _isProne);
+        if (simRd.CrouchPressedEdge || simRd.PronePressedEdge)
             GetComponent<PlayerAudio>()?.PlayRuffle();
 
         movement.SimulateGroundCheck(ref _grounded, _pred.Rigidbody, groundMask);
-        movement.SimulateMove(rd, _pred, _grounded, _isCrouching, _isProne, _isReloading);
-        movement.SimulateJump(rd, _pred, _grounded, ref _nextAllowedJumpTick, TimeManager.LocalTick);
-        shoot.ProcessFire(rd, ref _isReloading, ref _nextAllowedFireTick, TimeManager.LocalTick, this, _pred, HasAmmoNet.Value);
+        movement.SimulateMove(simRd, _pred, _grounded, _isCrouching, _isProne, _isReloading);
+        movement.SimulateJump(simRd, _pred, _grounded, ref _nextAllowedJumpTick, TimeManager.LocalTick);
+
+        shoot.ProcessFire(simRd, ref _isReloading, ref _nextAllowedFireTick, TimeManager.LocalTick, this, _pred, HasAmmoNet.Value);
+
         movement.ApplyDrag(_pred, _grounded, (float)TimeManager.TickDelta);
         movement.ClampSpeed(_pred);
 
@@ -186,6 +194,7 @@ public class PlayerMotor : TickNetworkBehaviour
         if (IsServerInitialized)
             BroadcastPoseToObservers(rb.position);
     }
+
 
     [Reconcile]
     private void PerformReconcile(StateData sd, Channel channel = Channel.Unreliable)

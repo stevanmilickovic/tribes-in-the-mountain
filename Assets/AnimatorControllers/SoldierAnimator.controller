@@ -1351,7 +1351,7 @@ AnimatorState:
   m_MirrorParameterActive: 0
   m_CycleOffsetParameterActive: 0
   m_TimeParameterActive: 0
-  m_Motion: {fileID: 7400000, guid: 784df2a35576b064b96c05816f57e519, type: 2}
+  m_Motion: {fileID: 5241429753261931353, guid: 143c1da22f501eb449ab752fe882ec64, type: 3}
   m_Tag: Reloading
   m_SpeedParameter: 
   m_MirrorParameter: 
@@ -2182,12 +2182,6 @@ AnimatorStateTransition:
   m_PrefabAsset: {fileID: 0}
   m_Name: 
   m_Conditions:
-  - m_ConditionMode: 6
-    m_ConditionEvent: State
-    m_EventTreshold: 3
-  - m_ConditionMode: 1
-    m_ConditionEvent: CombatMode
-    m_EventTreshold: 0
   - m_ConditionMode: 1
     m_ConditionEvent: Reload
     m_EventTreshold: 0
@@ -4501,12 +4495,12 @@ AnimatorStateTransition:
   m_Mute: 0
   m_IsExit: 0
   serializedVersion: 3
-  m_TransitionDuration: 0.05
-  m_TransitionOffset: 0
-  m_ExitTime: 0.0029985094
+  m_TransitionDuration: 0.54469067
+  m_TransitionOffset: 0.5036136
+  m_ExitTime: 0.41605252
   m_HasExitTime: 1
   m_HasFixedDuration: 0
-  m_InterruptionSource: 3
+  m_InterruptionSource: 1
   m_OrderedInterruption: 1
   m_CanTransitionToSelf: 1
 --- !u!114 &-5590510444086457381
@@ -6297,12 +6291,6 @@ AnimatorStateTransition:
   m_PrefabAsset: {fileID: 0}
   m_Name: 
   m_Conditions:
-  - m_ConditionMode: 6
-    m_ConditionEvent: State
-    m_EventTreshold: 1
-  - m_ConditionMode: 1
-    m_ConditionEvent: CombatMode
-    m_EventTreshold: 0
   - m_ConditionMode: 1
     m_ConditionEvent: Reload
     m_EventTreshold: 0
@@ -6446,7 +6434,7 @@ AnimatorState:
   m_MirrorParameterActive: 0
   m_CycleOffsetParameterActive: 0
   m_TimeParameterActive: 0
-  m_Motion: {fileID: 7400000, guid: 0b57be6da315616498dbac975cd35424, type: 2}
+  m_Motion: {fileID: 5241429753261931353, guid: 143c1da22f501eb449ab752fe882ec64, type: 3}
   m_Tag: Reloading
   m_SpeedParameter: 
   m_MirrorParameter: 
@@ -7194,7 +7182,7 @@ AnimatorState:
   m_MirrorParameterActive: 0
   m_CycleOffsetParameterActive: 0
   m_TimeParameterActive: 0
-  m_Motion: {fileID: 7400000, guid: c4db398d5823fe04a821e9a875a4bea4, type: 2}
+  m_Motion: {fileID: 5241429753261931353, guid: 143c1da22f501eb449ab752fe882ec64, type: 3}
   m_Tag: Reloading
   m_SpeedParameter: 
   m_MirrorParameter: 
@@ -9147,12 +9135,6 @@ AnimatorStateTransition:
   m_PrefabAsset: {fileID: 0}
   m_Name: 
   m_Conditions:
-  - m_ConditionMode: 6
-    m_ConditionEvent: State
-    m_EventTreshold: 2
-  - m_ConditionMode: 1
-    m_ConditionEvent: CombatMode
-    m_EventTreshold: 0
   - m_ConditionMode: 1
     m_ConditionEvent: Reload
     m_EventTreshold: 0
@@ -11347,7 +11329,7 @@ AnimatorController:
   - serializedVersion: 5
     m_Name: Fire & Reload
     m_StateMachine: {fileID: 7828273201727929986}
-    m_Mask: {fileID: 31900000, guid: 2bb7d28a5a9527946868181d90293fe7, type: 2}
+    m_Mask: {fileID: 31900000, guid: 3b9f2a4a28908a14a8a49b2c4708919d, type: 2}
     m_Motions: []
     m_Behaviours: []
     m_BlendingMode: 0
@@ -11839,7 +11821,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 0}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 2de390d703ea024459be74ae503e8a6e, type: 3}
   m_Name: 
@@ -18345,7 +18327,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 0}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 2de390d703ea024459be74ae503e8a6e, type: 3}
   m_Name: 
@@ -22377,7 +22359,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 0}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 2de390d703ea024459be74ae503e8a6e, type: 3}
   m_Name: 

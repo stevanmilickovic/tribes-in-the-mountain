@@ -14,6 +14,7 @@ public class PlayerAnimationDriver : NetworkBehaviour
     private float _aimWeight;
     private bool _wasAiming;
     private bool _wasDead;
+    private bool _wasReloading;
 
     public string lastDeathAnim;
 
@@ -68,6 +69,16 @@ public class PlayerAnimationDriver : NetworkBehaviour
             anim.SetBool("Death", false);
             anim.SetTrigger("Reset");
         }
+
+        bool reloading = motor.IsReloadingNet.Value;
+
+        if (reloading && !_wasReloading)
+        {
+            anim.SetTrigger("Reload");
+            Debug.Log("Set reload trigger");
+        }
+
+        _wasReloading = reloading;
 
         bool aiming = motor.IsAiming.Value;
         float speed = motor.IsOwner ? motor.PredictedVelocity.magnitude : motor.SpeedNet.Value;
