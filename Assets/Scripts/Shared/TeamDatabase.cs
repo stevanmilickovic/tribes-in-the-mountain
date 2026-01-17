@@ -74,7 +74,7 @@ public class TeamDatabase : MonoBehaviour
             Id = "team_b",
             DisplayName = "Team B",
 
-            ModelKey = "Tribes/Model2",
+            ModelKey = "Ottomans/Model2",
             WeaponKey = "Jeferdar",
 
             AnimatorPath = "",
