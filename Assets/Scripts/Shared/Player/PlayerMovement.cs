@@ -48,7 +48,7 @@ public class PlayerMovement
             speedMultiplier = 0.3f;
 
         if (rd.AimHeld)
-            speedMultiplier *= 0.2f;
+            speedMultiplier *= 0.6f;
 
         //if (isReloading)
         //    speedMultiplier *= 0.4f;

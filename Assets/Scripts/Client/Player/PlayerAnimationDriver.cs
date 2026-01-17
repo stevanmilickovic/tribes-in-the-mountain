@@ -82,7 +82,7 @@ public class PlayerAnimationDriver : NetworkBehaviour
         anim.SetBool("Crouch", motor.IsCrouchingNet.Value);
         anim.SetBool("Stand", !motor.IsCrouchingNet.Value && !motor.IsProneNet.Value);
 
-        if (aiming || motor.IsCrouching || speed < 0.01f)
+        if (speed < 0.01f)
             anim.SetFloat("Speed", 0f);
         else
             anim.SetFloat("Speed", speed);
