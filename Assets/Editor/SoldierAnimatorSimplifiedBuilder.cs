@@ -28,6 +28,14 @@ public static class SoldierAnimatorSimplifiedBuilder
     private const float LocomotionBlendThreshold = 0.35f;
     private const float LocomotionTransitionDuration = 0.08f;
     private const float FastTransitionDuration = 0.05f;
+    private const float RunEnterSpeed = 0.35f;
+    private const float RunExitSpeed = 0.10f;
+    private const float RunWindupPlaybackSpeed = 1.40f;
+    private const float RunWinddownPlaybackSpeed = 1.35f;
+    private const float RunWindupExitTime = 0.75f;
+    private const float RunWinddownTransitionOffset = 0.55f;
+    private const float RunWinddownExitTime = 0.93f;
+    private const float RunTransitionDuration = 0.14f;
 
     [MenuItem(MenuPath)]
     public static void Rebuild()
@@ -120,11 +128,14 @@ public static class SoldierAnimatorSimplifiedBuilder
         Motion sprintMoveMotion = ExtractPreferredMotion(sourceSprint.motion, 0, "Sprint");
         Motion aimedRunMotion = ExtractPreferredMotion(sourceAimMove.motion, 0, "Run Blend Tree");
 
-        AnimatorState standingFree = AddState(
+        AnimatorState standingIdle = AddState(
             sm,
             "StandingFreeLocomotion",
-            CreateSimpleBlendTree(target, "StandingFreeLocomotionTree", sourceIdleStanding.motion, sprintMoveMotion, LocomotionBlendThreshold),
-            sourceSprint);
+            CloneMotion(sourceIdleStanding.motion, target),
+            sourceIdleStanding);
+        AnimatorState standingRun = AddState(sm, "StandingFreeRun", sprintMoveMotion, sourceSprint);
+        AnimatorState runWindup = AddState(sm, "RunWindup", RequireClip("RunStartUp"), null);
+        AnimatorState runWinddown = AddState(sm, "RunWinddown", RequireClip("RunStop"), null);
         AnimatorState standingAim = AddState(
             sm,
             "StandingLocomotion",
@@ -136,6 +147,9 @@ public static class SoldierAnimatorSimplifiedBuilder
             "ProneLocomotion",
             CreateSimpleBlendTree(target, "ProneLocomotionTree", sourceIdleProne.motion, sourceCrawl.motion, LocomotionBlendThreshold),
             sourceIdleProne);
+
+        runWindup.speed = RunWindupPlaybackSpeed;
+        runWinddown.speed = RunWinddownPlaybackSpeed;
 
         AnimatorState standingToCrouch = AddStateFromSource(sm, target, source, BaseLayerName, "StandingToCrouch", "StandingToCrouch");
         AnimatorState crouchToStanding = AddStateFromSource(sm, target, source, BaseLayerName, "CrouchToStanding", "CrouchToStanding");
@@ -150,18 +164,43 @@ public static class SoldierAnimatorSimplifiedBuilder
         AnimatorState deathProne = AddStateFromSource(sm, target, source, BaseLayerName, "DeathProne", "DeathProne");
         AnimatorState deathRun = AddStateFromSource(sm, target, source, BaseLayerName, "DeathRun", "DeathRun");
 
-        sm.defaultState = standingFree;
+        sm.defaultState = standingIdle;
 
-        // Keep standing snappy, but let the crossfade breathe a little instead of snapping on one frame.
-        AddTransition(standingFree, standingAim, false, LocomotionTransitionDuration, 0f, If(CombatModeParam), If(StandParam));
-        AddTransition(standingAim, standingFree, false, LocomotionTransitionDuration, 0f, IfNot(CombatModeParam), If(StandParam));
+        // Wind-up/down add weight without delaying input. A brief tap cancels wind-up
+        // straight back to idle; only a sustained run reaches the loop and uses wind-down.
+        AddTransition(standingIdle, runWindup, false, RunTransitionDuration, 0f, IfNot(CombatModeParam), If(StandParam), Greater(SpeedParam, RunEnterSpeed));
+        AddTransition(runWindup, standingRun, true, RunTransitionDuration, RunWindupExitTime);
+        AddTransition(runWindup, standingIdle, false, RunTransitionDuration, 0f, Less(SpeedParam, RunExitSpeed));
+        AnimatorStateTransition runToWinddown = AddTransition(
+            standingRun,
+            runWinddown,
+            false,
+            RunTransitionDuration,
+            0f,
+            Less(SpeedParam, RunExitSpeed));
+        runToWinddown.offset = RunWinddownTransitionOffset;
+        AddTransition(runWinddown, standingIdle, true, RunTransitionDuration, RunWinddownExitTime);
+        AddTransition(runWinddown, runWindup, false, RunTransitionDuration, 0f, Greater(SpeedParam, RunEnterSpeed));
 
-        AddTransition(standingFree, standingToCrouch, false, FastTransitionDuration, 0f, If(CrouchParam));
+        AddTransition(standingIdle, standingAim, false, LocomotionTransitionDuration, 0f, If(CombatModeParam), If(StandParam));
+        AddTransition(standingRun, standingAim, false, LocomotionTransitionDuration, 0f, If(CombatModeParam), If(StandParam));
+        AddTransition(runWindup, standingAim, false, FastTransitionDuration, 0f, If(CombatModeParam), If(StandParam));
+        AddTransition(runWinddown, standingAim, false, FastTransitionDuration, 0f, If(CombatModeParam), If(StandParam));
+        AddTransition(standingAim, standingIdle, false, LocomotionTransitionDuration, 0f, IfNot(CombatModeParam), If(StandParam), Less(SpeedParam, RunEnterSpeed));
+        AddTransition(standingAim, standingRun, false, LocomotionTransitionDuration, 0f, IfNot(CombatModeParam), If(StandParam), Greater(SpeedParam, RunEnterSpeed));
+
+        AddTransition(standingIdle, standingToCrouch, false, FastTransitionDuration, 0f, If(CrouchParam));
+        AddTransition(standingRun, standingToCrouch, false, FastTransitionDuration, 0f, If(CrouchParam));
+        AddTransition(runWindup, standingToCrouch, false, FastTransitionDuration, 0f, If(CrouchParam));
+        AddTransition(runWinddown, standingToCrouch, false, FastTransitionDuration, 0f, If(CrouchParam));
         AddTransition(standingAim, standingToCrouch, false, FastTransitionDuration, 0f, If(CrouchParam));
 
-        AddTransition(standingFree, standingToProne, false, FastTransitionDuration, 0f, If(ProneParam), Less(SpeedParam, DiveToProneThreshold));
+        AddTransition(standingIdle, standingToProne, false, FastTransitionDuration, 0f, If(ProneParam), Less(SpeedParam, DiveToProneThreshold));
+        AddTransition(standingRun, diveToProne, false, 0.03f, 0f, If(ProneParam), Greater(SpeedParam, DiveToProneThreshold));
+        AddTransition(runWindup, standingToProne, false, FastTransitionDuration, 0f, If(ProneParam), Less(SpeedParam, DiveToProneThreshold));
+        AddTransition(runWindup, diveToProne, false, 0.03f, 0f, If(ProneParam), Greater(SpeedParam, DiveToProneThreshold));
+        AddTransition(runWinddown, standingToProne, false, FastTransitionDuration, 0f, If(ProneParam), Less(SpeedParam, DiveToProneThreshold));
         AddTransition(standingAim, standingToProne, false, FastTransitionDuration, 0f, If(ProneParam));
-        AddTransition(standingFree, diveToProne, false, 0.03f, 0f, If(ProneParam), Greater(SpeedParam, DiveToProneThreshold));
 
         AddTransition(crouch, crouchToStanding, false, FastTransitionDuration, 0f, If(StandParam));
         AddTransition(crouch, crouchToProne, false, FastTransitionDuration, 0f, If(ProneParam));
@@ -170,11 +209,11 @@ public static class SoldierAnimatorSimplifiedBuilder
         AddTransition(prone, proneToCrouch, false, FastTransitionDuration, 0f, If(CrouchParam));
 
         AddTransition(standingToCrouch, crouch, true, FastTransitionDuration, 0.95f);
-        AddTransition(crouchToStanding, standingFree, true, FastTransitionDuration, 0.95f, IfNot(CombatModeParam));
+        AddTransition(crouchToStanding, standingIdle, true, FastTransitionDuration, 0.95f, IfNot(CombatModeParam));
         AddTransition(crouchToStanding, standingAim, true, FastTransitionDuration, 0.95f, If(CombatModeParam));
         AddTransition(standingToProne, prone, true, FastTransitionDuration, 0.95f);
         AddTransition(diveToProne, prone, true, 0.02f, 0.95f);
-        AddTransition(proneToStanding, standingFree, true, FastTransitionDuration, 0.95f, IfNot(CombatModeParam));
+        AddTransition(proneToStanding, standingIdle, true, FastTransitionDuration, 0.95f, IfNot(CombatModeParam));
         AddTransition(proneToStanding, standingAim, true, FastTransitionDuration, 0.95f, If(CombatModeParam));
         AddTransition(crouchToProne, prone, true, FastTransitionDuration, 0.95f);
         AddTransition(proneToCrouch, crouch, true, FastTransitionDuration, 0.95f);
@@ -186,7 +225,7 @@ public static class SoldierAnimatorSimplifiedBuilder
 
         AddAnyStateTransition(sm, prone, false, 0.02f, 0f, If(ResetParam), If(ProneParam));
         AddAnyStateTransition(sm, crouch, false, 0.02f, 0f, If(ResetParam), If(CrouchParam));
-        AddAnyStateTransition(sm, standingFree, false, 0.02f, 0f, If(ResetParam), If(StandParam), IfNot(CombatModeParam));
+        AddAnyStateTransition(sm, standingIdle, false, 0.02f, 0f, If(ResetParam), If(StandParam), IfNot(CombatModeParam));
         AddAnyStateTransition(sm, standingAim, false, 0.02f, 0f, If(ResetParam), If(StandParam), If(CombatModeParam));
     }
 
