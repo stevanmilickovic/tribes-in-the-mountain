@@ -9,6 +9,7 @@ public static class SoldierAnimatorSimplifiedBuilder
     private const string SourceControllerPath = "Assets/AnimatorControllers/SoldierAnimator.controller";
     private const string TargetControllerPath = "Assets/AnimatorControllers/SoldierAnimatorSimplified.controller";
     private const string MenuPath = "Tools/Animation/Rebuild Soldier Animator Simplified";
+    private const string SoldierAnimationPath = "Assets/GameDevDave/Realistic Soldier Animation Pack/Animations/Soldier/";
 
     private const string BaseLayerName = "Base Layer";
     private const string AimLayerName = "Aim";
@@ -38,10 +39,10 @@ public static class SoldierAnimatorSimplifiedBuilder
             return;
         }
 
-        if (AssetDatabase.LoadAssetAtPath<AnimatorController>(TargetControllerPath) != null)
-            AssetDatabase.DeleteAsset(TargetControllerPath);
+        AnimatorController target = AssetDatabase.LoadAssetAtPath<AnimatorController>(TargetControllerPath);
+        if (target == null)
+            target = AnimatorController.CreateAnimatorControllerAtPath(TargetControllerPath);
 
-        AnimatorController target = AnimatorController.CreateAnimatorControllerAtPath(TargetControllerPath);
         if (target == null)
         {
             Debug.LogError($"Could not create target controller at {TargetControllerPath}");
@@ -103,7 +104,7 @@ public static class SoldierAnimatorSimplifiedBuilder
         AddLayer(target, ReloadLayerName, reloadStateMachine, sourceReloadLayer != null ? sourceReloadLayer.avatarMask : null, 1f);
 
         BuildBaseLayer(source, target, baseStateMachine);
-        BuildAimLayer(source, target, aimStateMachine);
+        BuildAimLayer(aimStateMachine);
         BuildReloadLayer(source, target, reloadStateMachine);
     }
 
@@ -189,18 +190,20 @@ public static class SoldierAnimatorSimplifiedBuilder
         AddAnyStateTransition(sm, standingAim, false, 0.02f, 0f, If(ResetParam), If(StandParam), If(CombatModeParam));
     }
 
-    private static void BuildAimLayer(AnimatorController source, AnimatorController target, AnimatorStateMachine sm)
+    private static void BuildAimLayer(AnimatorStateMachine sm)
     {
-        AnimatorState aimingStanding = AddStateFromSource(sm, target, source, AimLayerName, "AimingStanding", "AimingStanding");
-        AnimatorState aimingCrouch = AddStateFromSource(sm, target, source, AimLayerName, "AimingCrouch", "AimingCrouch");
-        AnimatorState aimingProne = AddStateFromSource(sm, target, source, AimLayerName, "AimingProne", "AimingProne");
+        // The pack's Aim layer is a transition graph, not a reliable source for its held poses.
+        // Use the authored clips directly so the mask overrides locomotion above the hips.
+        AnimatorState aimingStanding = AddState(sm, "AimingStanding", RequireClip("AimingStanding"), null);
+        AnimatorState aimingCrouch = AddState(sm, "AimingCrouch", RequireClip("AimingCrouch"), null);
+        AnimatorState aimingProne = AddState(sm, "AimingProne", RequireClip("AimingProne"), null);
 
-        AnimatorState standingToCrouch = AddStateFromSource(sm, target, source, AimLayerName, "AimStandingToCrouch", "AimStandingToCrouch");
-        AnimatorState crouchToStanding = AddStateFromSource(sm, target, source, AimLayerName, "AimCrouchToStanding", "AimCrouchToStanding");
-        AnimatorState standingToProne = AddStateFromSource(sm, target, source, AimLayerName, "AimStandingToProne", "AimStandingToProne");
-        AnimatorState proneToStanding = AddStateFromSource(sm, target, source, AimLayerName, "AimProneToStanding", "AimProneToStanding");
-        AnimatorState crouchToProne = AddStateFromSource(sm, target, source, AimLayerName, "AimCrouchToProne", "AimCrouchToProne");
-        AnimatorState proneToCrouch = AddStateFromSource(sm, target, source, AimLayerName, "AimProneToCrouch", "AimProneToCrouch");
+        AnimatorState standingToCrouch = AddState(sm, "AimStandingToCrouch", RequireClip("AimStandingToCrouch"), null);
+        AnimatorState crouchToStanding = AddState(sm, "AimCrouchToStanding", RequireClip("AimCrouchToStanding"), null);
+        AnimatorState standingToProne = AddState(sm, "AimStandingToProne", RequireClip("AimStandingToProne"), null);
+        AnimatorState proneToStanding = AddState(sm, "AimProneToStanding", RequireClip("AimProneToStanding"), null);
+        AnimatorState crouchToProne = AddState(sm, "AimCrouchToProne", RequireClip("AimCrouchToProne"), null);
+        AnimatorState proneToCrouch = AddState(sm, "AimProneToCrouch", RequireClip("AimProneToCrouch"), null);
 
         sm.defaultState = aimingStanding;
 
@@ -284,6 +287,16 @@ public static class SoldierAnimatorSimplifiedBuilder
     {
         AnimatorState sourceState = RequireState(source, layerName, sourceStateName);
         return AddState(sm, targetStateName, CloneMotion(sourceState.motion, target), sourceState);
+    }
+
+    private static AnimationClip RequireClip(string clipName)
+    {
+        string path = $"{SoldierAnimationPath}{clipName}.anim";
+        AnimationClip clip = AssetDatabase.LoadAssetAtPath<AnimationClip>(path);
+        if (clip == null)
+            throw new InvalidOperationException($"Could not load required animation clip at {path}.");
+
+        return clip;
     }
 
     private static AnimatorState AddState(AnimatorStateMachine sm, string stateName, Motion motion, AnimatorState sourceState)
