@@ -3,6 +3,50 @@ using FishNet.Object;
 
 public class PlayerAnimationDriver : NetworkBehaviour
 {
+    private enum Stance
+    {
+        Standing,
+        Crouching,
+        Prone
+    }
+
+    private readonly struct StanceTransitionPair
+    {
+        public readonly int EnterHash;
+        public readonly int ReturnHash;
+        public readonly string EnterName;
+        public readonly string ReturnName;
+        public readonly Stance Start;
+        public readonly Stance End;
+
+        public StanceTransitionPair(string enterName, string returnName, Stance start, Stance end)
+        {
+            EnterHash = Animator.StringToHash(enterName);
+            ReturnHash = Animator.StringToHash(returnName);
+            EnterName = enterName;
+            ReturnName = returnName;
+            Start = start;
+            End = end;
+        }
+    }
+
+    private static readonly StanceTransitionPair[] BaseStanceTransitions =
+    {
+        new StanceTransitionPair("StandingToProne", "ProneToStanding", Stance.Standing, Stance.Prone),
+        new StanceTransitionPair("DiveToProne", "ProneToStanding", Stance.Standing, Stance.Prone),
+        new StanceTransitionPair("StandingToCrouch", "CrouchToStanding", Stance.Standing, Stance.Crouching),
+        new StanceTransitionPair("CrouchToProne", "ProneToCrouch", Stance.Crouching, Stance.Prone)
+    };
+
+    private static readonly StanceTransitionPair[] AimStanceTransitions =
+    {
+        new StanceTransitionPair("AimStandingToProne", "AimProneToStanding", Stance.Standing, Stance.Prone),
+        new StanceTransitionPair("AimStandingToCrouch", "AimCrouchToStanding", Stance.Standing, Stance.Crouching),
+        new StanceTransitionPair("AimCrouchToProne", "AimProneToCrouch", Stance.Crouching, Stance.Prone)
+    };
+
+    private const float StanceReversalBlendDuration = 0.05f;
+
     public Animator anim;
     public PlayerMotor motor;
     public PlayerInputs inputs;
@@ -15,6 +59,8 @@ public class PlayerAnimationDriver : NetworkBehaviour
     private bool _wasAiming;
     private bool _wasDead;
     private bool _wasReloading;
+    private Stance _previousStance;
+    private bool _hasPreviousStance;
 
     public string lastDeathAnim;
 
@@ -34,6 +80,7 @@ public class PlayerAnimationDriver : NetworkBehaviour
 
         _aimWeight = 0f;
         _wasAiming = false;
+        _hasPreviousStance = false;
 
         if (anim != null)
         {
@@ -49,6 +96,7 @@ public class PlayerAnimationDriver : NetworkBehaviour
 
         if (!health.IsAlive)
         {
+            _hasPreviousStance = false;
             if (!_wasDead)
             {
                 if (motor.IsProneNet.Value) lastDeathAnim = "DeathProne";
@@ -89,14 +137,20 @@ public class PlayerAnimationDriver : NetworkBehaviour
         if (aiming && !_wasAiming)
             anim.SetTrigger("Combat");
 
-        anim.SetBool("Prone", motor.IsProneNet.Value);
-        anim.SetBool("Crouch", motor.IsCrouchingNet.Value);
-        anim.SetBool("Stand", !motor.IsCrouchingNet.Value && !motor.IsProneNet.Value);
+        Stance stance = GetStance();
+        anim.SetBool("Prone", stance == Stance.Prone);
+        anim.SetBool("Crouch", stance == Stance.Crouching);
+        anim.SetBool("Stand", stance == Stance.Standing);
 
         if (speed < 0.01f)
             anim.SetFloat("Speed", 0f);
         else
             anim.SetFloat("Speed", speed);
+
+        if (_hasPreviousStance && stance != _previousStance)
+            ReverseInterruptedStanceTransitions(stance);
+        _previousStance = stance;
+        _hasPreviousStance = true;
 
         float target = aiming ? 1f : 0f;
         _aimWeight = Mathf.MoveTowards(_aimWeight, target, aimBlendSpeed * Time.deltaTime);
@@ -104,6 +158,66 @@ public class PlayerAnimationDriver : NetworkBehaviour
             anim.SetLayerWeight(aimLayerIndex, _aimWeight);
 
         _wasAiming = aiming;
+    }
+
+    private Stance GetStance()
+    {
+        bool prone = motor.IsOwner ? motor.IsProne : motor.IsProneNet.Value;
+        bool crouching = motor.IsOwner ? motor.IsCrouching : motor.IsCrouchingNet.Value;
+
+        if (prone) return Stance.Prone;
+        if (crouching) return Stance.Crouching;
+        return Stance.Standing;
+    }
+
+    private void ReverseInterruptedStanceTransitions(Stance destination)
+    {
+        ReverseInterruptedStanceTransition(0, destination, BaseStanceTransitions);
+        if (aimLayerIndex >= 0 && aimLayerIndex < anim.layerCount)
+            ReverseInterruptedStanceTransition(aimLayerIndex, destination, AimStanceTransitions);
+    }
+
+    private void ReverseInterruptedStanceTransition(
+        int layerIndex,
+        Stance destination,
+        StanceTransitionPair[] pairs)
+    {
+        // During a blend, the incoming state is the visible stance transition we want to undo.
+        if (anim.IsInTransition(layerIndex) &&
+            TryReverseStanceTransition(anim.GetNextAnimatorStateInfo(layerIndex), layerIndex, destination, pairs))
+            return;
+
+        TryReverseStanceTransition(anim.GetCurrentAnimatorStateInfo(layerIndex), layerIndex, destination, pairs);
+    }
+
+    private bool TryReverseStanceTransition(
+        AnimatorStateInfo state,
+        int layerIndex,
+        Stance destination,
+        StanceTransitionPair[] pairs)
+    {
+        foreach (StanceTransitionPair pair in pairs)
+        {
+            string reverseName;
+            if (state.shortNameHash == pair.EnterHash && destination == pair.Start)
+                reverseName = pair.ReturnName;
+            else if (state.shortNameHash == pair.ReturnHash && destination == pair.End)
+                reverseName = pair.EnterName;
+            else
+                continue;
+
+            int reverseHash = Animator.StringToHash(anim.GetLayerName(layerIndex) + "." + reverseName);
+            if (!anim.HasState(layerIndex, reverseHash))
+                continue;
+
+            // The paired clips depict opposite motions. Complementary progress starts
+            // the return close to the pose reached when the input was reversed.
+            float reverseTime = 1f - Mathf.Clamp01(state.normalizedTime);
+            anim.CrossFade(reverseHash, StanceReversalBlendDuration, layerIndex, reverseTime);
+            return true;
+        }
+
+        return false;
     }
 
     private void HandleAudio(float speed)

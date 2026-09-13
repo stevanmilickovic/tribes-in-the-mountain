@@ -1,6 +1,7 @@
 using UnityEngine;
 using FishNet.Object;
 
+[DefaultExecutionOrder(200)]
 public class AimGun : NetworkBehaviour
 {
     public Transform aimTransform;
@@ -9,33 +10,63 @@ public class AimGun : NetworkBehaviour
     public PlayerMotor playerMotor;
     public int iterations = 10;
     [Range(0, 1)] public float weight = 1;
+    [Min(0.01f)] public float ownerDirectionSmoothTime = 0.04f;
+    [Min(0.01f)] public float remoteDirectionSmoothTime = 0.08f;
 
-    private Vector3 _remoteTargetPos;
+    private Camera _ownerCamera;
+    private Vector3 _remoteAimDirection;
+    private Vector3 _visualAimDirection;
     private float _nextAimSend;
+    private bool _hasRemoteAim;
+    private bool _hasVisualAim;
 
-    void LateUpdate()
+    public override void OnStartClient()
     {
-        if (playerMotor == null) return;
-        if (!playerMotor.IsAiming.Value) return;
-        if (bone == null || aimTransform == null) return;
+        base.OnStartClient();
+        if (IsOwner)
+            _ownerCamera = Camera.main;
+    }
+
+    private void LateUpdate()
+    {
+        if (playerMotor == null)
+            return;
+
+        if (!playerMotor.IsAiming.Value)
+        {
+            _hasVisualAim = false;
+            return;
+        }
+
+        if (bone == null || aimTransform == null)
+            return;
 
         if (playerMotor.IsOwner)
         {
+            if (_ownerCamera == null)
+                _ownerCamera = Camera.main;
+            if (_ownerCamera == null)
+                return;
+
             if (playerMotor.target != null)
                 targetPosition = playerMotor.target.position;
 
-            AimAtTarget(bone, targetPosition, weight);
+            Vector3 viewDirection = _ownerCamera.transform.forward;
+            AimAtDirection(GetSmoothedVisualDirection(viewDirection, ownerDirectionSmoothTime));
 
             if (IsSpawned && Time.time >= _nextAimSend)
             {
                 _nextAimSend = Time.time + 0.05f;
-                RpcSendTargetPos(targetPosition);
+                RpcSendAim(targetPosition, viewDirection);
             }
         }
         else
         {
-            targetPosition = Vector3.Lerp(targetPosition, _remoteTargetPos, Time.deltaTime * 40f);
-            AimAtTarget(bone, targetPosition, weight);
+            if (!_hasRemoteAim)
+                return;
+
+            AimAtDirection(GetSmoothedVisualDirection(
+                _remoteAimDirection, remoteDirectionSmoothTime));
         }
     }
 
@@ -49,31 +80,46 @@ public class AimGun : NetworkBehaviour
     }
 
     [ServerRpc(RequireOwnership = true)]
-    private void RpcSendTargetPos(Vector3 pos)
+    private void RpcSendAim(Vector3 pos, Vector3 direction)
     {
-        RpcUpdateTargetPos(pos);
+        // The dedicated server also needs the latest aim point for PlayerShoot.
+        targetPosition = pos;
+        RpcUpdateAim(pos, direction);
     }
 
     [ObserversRpc(BufferLast = true, ExcludeOwner = true)]
-    private void RpcUpdateTargetPos(Vector3 pos)
+    private void RpcUpdateAim(Vector3 pos, Vector3 direction)
     {
-        _remoteTargetPos = pos;
+        targetPosition = pos;
+        _remoteAimDirection = direction;
+        _hasRemoteAim = true;
     }
 
-    private void AimAtTarget(Transform b, Vector3 targetPos, float w)
+    private void AimAtDirection(Vector3 direction)
     {
-        if (b == null || aimTransform == null) return;
-
-        Vector3 origin = aimTransform.position;
-        Vector3 targetDirection = targetPos - origin;
-        if (targetDirection.sqrMagnitude < 0.000001f) return;
-
+        // The view direction stays defined even when a nearby hit is behind the
+        // muzzle. A world-space hit point does not, and makes the bone flip sides.
         for (int i = 0; i < iterations; i++)
         {
-            Vector3 aimDirection = aimTransform.forward;
-            Quaternion aimTowards = Quaternion.FromToRotation(aimDirection, targetDirection);
-            Quaternion blendedRotation = Quaternion.Slerp(Quaternion.identity, aimTowards, (w / iterations) * 3.5f);
-            b.rotation = blendedRotation * b.rotation;
+            Quaternion aimTowards = Quaternion.FromToRotation(aimTransform.forward, direction);
+            Quaternion blendedRotation = Quaternion.Slerp(
+                Quaternion.identity,
+                aimTowards,
+                (weight / iterations) * 3.5f);
+            bone.rotation = blendedRotation * bone.rotation;
         }
+    }
+
+    private Vector3 GetSmoothedVisualDirection(Vector3 direction, float smoothTime)
+    {
+        if (!_hasVisualAim)
+        {
+            _visualAimDirection = direction;
+            _hasVisualAim = true;
+        }
+
+        float blend = 1f - Mathf.Exp(-Time.deltaTime / smoothTime);
+        _visualAimDirection = Vector3.Slerp(_visualAimDirection, direction, blend);
+        return _visualAimDirection;
     }
 }

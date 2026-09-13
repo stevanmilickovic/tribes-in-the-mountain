@@ -102,6 +102,7 @@ GameObject:
   - component: {fileID: 7009812168602803100}
   - component: {fileID: 7577885679099483198}
   - component: {fileID: 7512584027632664504}
+  - component: {fileID: 4043738683986097741}
   m_Layer: 11
   m_Name: PlayerPrefab
   m_TagString: Untagged
@@ -238,8 +239,6 @@ MonoBehaviour:
   _networkObjectCache: {fileID: 1294418109039712168}
   playerInputs: {fileID: 7161943386019570500}
   playerMotor: {fileID: -3263947119899552499}
-  orientation: {fileID: 7682557729649604570}
-  playerObj: {fileID: 271099231719261030}
   targetObj: {fileID: 9050409771403802478}
 --- !u!114 &1294418109039712168
 MonoBehaviour:
@@ -528,6 +527,19 @@ MonoBehaviour:
   aimGun: {fileID: 7038535661973972034}
   animDriver: {fileID: 5153675513797899763}
   cameraBinder: {fileID: 431268789512667861}
+--- !u!114 &4043738683986097741
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1715684365727957010}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c45b452050d1452fa812ec6890111942, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  motor: {fileID: -3263947119899552499}
 --- !u!1 &3735577750373151970
 GameObject:
   m_ObjectHideFlags: 0

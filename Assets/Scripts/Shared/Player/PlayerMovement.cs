@@ -6,7 +6,7 @@ public class PlayerMovement
     public float moveSpeed = 6f;
     public float airMultiplier = 0.6f;
     public float rotationSpeed = 12f;
-    public float aimingRotationSpeed = 20f;
+    public float aimingRotationSpeed = 720f;
     public float jumpForce = 3f;
     public float groundDrag = 4f;
     public float playerHeight = 1.8f;
@@ -61,27 +61,17 @@ public class PlayerMovement
             body.AddForce(force * airMultiplier, ForceMode.Force);
     }
 
-    public void SimulateRotation(InputData rd, PredictionRigidbody body, float tickDelta, Transform aimTarget = null)
+    public void SimulateRotation(InputData rd, PredictionRigidbody body, float tickDelta)
     {
         if (rd.AimHeld)
         {
-            Quaternion targetRot;
-            if (aimTarget != null)
-            {
-                Vector3 dir = aimTarget.position - body.Rigidbody.position;
-                dir.y = 0f;
-                if (dir.sqrMagnitude > 0.001f)
-                    targetRot = Quaternion.LookRotation(dir.normalized, Vector3.up);
-                else
-                    targetRot = body.Rigidbody.rotation;
-            }
-            else
-            {
-                targetRot = Quaternion.Euler(0f, rd.Yaw, 0f);
-            }
+            // Aim targets can be collision-adjusted and camera-offset. The body must
+            // follow the replicated camera yaw instead, otherwise close geometry can
+            // make weapon aiming feed back into root rotation.
+            Quaternion targetRot = Quaternion.Euler(0f, rd.Yaw, 0f);
 
             float spd = Mathf.Max(rotationSpeed, aimingRotationSpeed);
-            Quaternion newRot = Quaternion.Slerp(body.Rigidbody.rotation, targetRot, spd * tickDelta);
+            Quaternion newRot = Quaternion.RotateTowards(body.Rigidbody.rotation, targetRot, spd * tickDelta);
             body.Rigidbody.MoveRotation(newRot);
             return;
         }

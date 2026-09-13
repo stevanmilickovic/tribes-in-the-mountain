@@ -6310,7 +6310,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1237845107}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 72ece51f2901e7445ab60da3685d6b5f, type: 3}
   m_Name: 
@@ -6415,14 +6415,24 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 41dd96de280c45d44989277daf3a52d4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  orientation: {fileID: 0}
   player: {fileID: 0}
   lookYawDeg: 0
   lookPitchDeg: 0
-  minPitch: -89
-  maxPitch: 89
-  freeCam: {fileID: 2029902954}
-  aimCam: {fileID: 2118940961}
+  pivotOffset: {x: 0, y: 1.2, z: 0}
+  followSmoothTime: 0.04
+  aimTransitionTime: 0.12
+  teleportSnapDistance: 3
+  mouseSensitivityX: 1
+  mouseSensitivityY: 1
+  minPitch: -75
+  maxPitch: 75
+  crouchDrop: 0.45
+  proneDrop: 0.85
+  stanceTransitionTime: 0.15
+  freeDistance: 3.5
+  aimDistance: 3
+  freeShoulderOffset: 0
+  aimShoulderOffset: 0.65
   crosshair: {fileID: 150166421}
 --- !u!114 &1237845112
 MonoBehaviour:
@@ -6439,10 +6449,6 @@ MonoBehaviour:
   playerMotor: {fileID: 0}
   target: {fileID: 0}
   maxDistance: 50
-  minDistance: 5
-  hitMask:
-    serializedVersion: 2
-    m_Bits: 4294967295
 --- !u!114 &1237845113
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -9660,7 +9666,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &2029902953
 Transform:
   m_ObjectHideFlags: 0
@@ -10397,7 +10403,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &2118940960
 Transform:
   m_ObjectHideFlags: 0

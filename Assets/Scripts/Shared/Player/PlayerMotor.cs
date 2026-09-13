@@ -24,10 +24,9 @@ public class PlayerMotor : TickNetworkBehaviour
     public AimGun aimGun;
     public Transform muzzle;
     public GameObject smokePrefab;
+    public event Action<Vector3> FireVisualRequested;
 
     public readonly SyncVar<bool> IsAiming = new();
-    public readonly SyncVar<Quaternion> RotationNet = new();
-    private float _nextRotSend;
 
     public readonly SyncVar<bool> IsCrouchingNet = new();
     public readonly SyncVar<bool> IsProneNet = new();
@@ -50,6 +49,7 @@ public class PlayerMotor : TickNetworkBehaviour
     private struct StateData : IReconcileData
     {
         public Vector3 Position;
+        public Quaternion Rotation;
         public Vector3 Velocity;
 
         public bool Grounded;
@@ -102,24 +102,6 @@ public class PlayerMotor : TickNetworkBehaviour
         }
     }
 
-    void Update()
-    {
-        if (!IsOwner || inputs == null) return;
-
-        var rd = inputs.LatestInput;
-
-        if (Cursor.lockState != CursorLockMode.Locked)
-            return;
-
-        movement.SimulateRotation(rd, _pred, Time.deltaTime, target);
-
-        if (Time.time >= _nextRotSend)
-        {
-            _nextRotSend = Time.time + 0.05f;
-            RpcSendRotation(rb.rotation);
-        }
-    }
-
     private void LateUpdate()
     {
         if (!IsOwner && !IsServerInitialized)
@@ -143,6 +125,7 @@ public class PlayerMotor : TickNetworkBehaviour
         var sd = new StateData
         {
             Position = rb.position,
+            Rotation = rb.rotation,
             Velocity = rb.linearVelocity,
             Grounded = _grounded,
             IsCrouching = _isCrouching,
@@ -181,6 +164,7 @@ public class PlayerMotor : TickNetworkBehaviour
             GetComponent<PlayerAudio>()?.PlayRuffle();
 
         movement.SimulateGroundCheck(ref _grounded, _pred.Rigidbody, groundMask);
+        movement.SimulateRotation(simRd, _pred, (float)TimeManager.TickDelta);
         movement.SimulateMove(simRd, _pred, _grounded, _isCrouching, _isProne, _isReloading);
         movement.SimulateJump(simRd, _pred, _grounded, ref _nextAllowedJumpTick, TimeManager.LocalTick);
 
@@ -192,7 +176,7 @@ public class PlayerMotor : TickNetworkBehaviour
         _pred.Simulate();
 
         if (IsServerInitialized)
-            BroadcastPoseToObservers(rb.position);
+            BroadcastPoseToObservers(rb.position, rb.rotation);
     }
 
 
@@ -208,7 +192,10 @@ public class PlayerMotor : TickNetworkBehaviour
         _hasAmmo = sd.HasAmmo;
 
         if (_skipBroadcastTicks <= 0)
+        {
             rb.position = sd.Position;
+            rb.rotation = sd.Rotation;
+        }
 
         rb.linearVelocity = sd.Velocity;
     }
@@ -233,23 +220,8 @@ public class PlayerMotor : TickNetworkBehaviour
             IsReloadingNet.Value = value;
     }
 
-    [ServerRpc(RequireOwnership = true)]
-    private void RpcSendRotation(Quaternion rot)
-    {
-        rb.MoveRotation(rot);
-        RotationNet.Value = rot;
-        RpcBroadcastRotation(rot);
-    }
-
-    [ObserversRpc(BufferLast = true)]
-    private void RpcBroadcastRotation(Quaternion rot)
-    {
-        if (IsOwner) return;
-        rb.MoveRotation(rot);
-    }
-
     [Server]
-    void BroadcastPoseToObservers(Vector3 pos)
+    void BroadcastPoseToObservers(Vector3 pos, Quaternion rotation)
     {
         if (_skipBroadcastTicks > 0)
         {
@@ -259,13 +231,14 @@ public class PlayerMotor : TickNetworkBehaviour
 
         foreach (var c in Observers)
             if (c != Owner)
-                TargetRecvPose(c, pos.x, pos.y, pos.z);
+                TargetRecvPose(c, pos.x, pos.y, pos.z, rotation);
     }
 
     [TargetRpc]
-    void TargetRecvPose(NetworkConnection _, float px, float py, float pz)
+    void TargetRecvPose(NetworkConnection _, float px, float py, float pz, Quaternion rotation)
     {
         _netTargetPos = new Vector3(px, py, pz);
+        rb.MoveRotation(rotation);
     }
 
     [ObserversRpc(BufferLast = false)]
@@ -275,17 +248,8 @@ public class PlayerMotor : TickNetworkBehaviour
         if (audio != null)
             audio.PlayShot();
 
-        if (smokePrefab != null && muzzle != null)
-        {
-            var rot = Quaternion.LookRotation(dir, Vector3.up);
-
-            var smokeObj = Instantiate(smokePrefab, muzzle.position, rot);
-            var ps = smokeObj.GetComponentInChildren<ParticleSystem>();
-            if (ps != null)
-                ps.Play();
-
-            Destroy(smokeObj, ps.main.duration + ps.main.startLifetime.constantMax);
-        }
+        // Visuals need the muzzle after its LateUpdate animation/aim pass.
+        FireVisualRequested?.Invoke(dir);
     }
 
     [Server]

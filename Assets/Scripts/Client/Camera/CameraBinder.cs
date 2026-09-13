@@ -6,8 +6,6 @@ public class CameraBinder : NetworkBehaviour
     [Header("References inside Player Prefab")]
     public PlayerInputs playerInputs;
     public PlayerMotor playerMotor;
-    public Transform orientation;
-    public Transform playerObj;
     public Transform targetObj;
 
     private ThirdPersonCam _cam;
@@ -47,9 +45,6 @@ public class CameraBinder : NetworkBehaviour
     {
         if (!IsOwner) return;
         if (_cam == null) return;
-        if (orientation == null) return;
-
-        Transform follow = playerObj != null ? playerObj : transform;
-        _cam.SetPlayerInfo(transform, orientation, follow);
+        _cam.SetPlayerInfo(transform);
     }
 }
