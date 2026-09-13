@@ -143,7 +143,7 @@ public class PlayerMotor : TickNetworkBehaviour
         var sd = new StateData
         {
             Position = rb.position,
-            Velocity = rb.velocity,
+            Velocity = rb.linearVelocity,
             Grounded = _grounded,
             IsCrouching = _isCrouching,
             IsProne = _isProne,
@@ -168,7 +168,7 @@ public class PlayerMotor : TickNetworkBehaviour
         {
             IsCrouchingNet.Value = _isCrouching;
             IsProneNet.Value = _isProne;
-            SpeedNet.Value = _pred.Rigidbody.velocity.magnitude;
+            SpeedNet.Value = _pred.Rigidbody.linearVelocity.magnitude;
             IsReloadingNet.Value = _isReloading;
             HasAmmoNet.Value = _hasAmmo;
 
@@ -210,7 +210,7 @@ public class PlayerMotor : TickNetworkBehaviour
         if (_skipBroadcastTicks <= 0)
             rb.position = sd.Position;
 
-        rb.velocity = sd.Velocity;
+        rb.linearVelocity = sd.Velocity;
     }
 
     public void BindLoadout(AimGun newAimGun, Transform newMuzzle)
@@ -296,7 +296,7 @@ public class PlayerMotor : TickNetworkBehaviour
 
         rb.position = pos;
         rb.rotation = rot;
-        rb.velocity = Vector3.zero;
+        rb.linearVelocity = Vector3.zero;
         rb.angularVelocity = Vector3.zero;
 
         _isReloading = false;
@@ -317,7 +317,7 @@ public class PlayerMotor : TickNetworkBehaviour
 
         rb.position = pos;
         rb.rotation = rot;
-        rb.velocity = Vector3.zero;
+        rb.linearVelocity = Vector3.zero;
         rb.angularVelocity = Vector3.zero;
 
         _netTargetPos = pos;
@@ -352,7 +352,7 @@ public class PlayerMotor : TickNetworkBehaviour
 
     public Vector3 PredictedVelocity =>
         _pred != null && _pred.Rigidbody != null
-            ? _pred.Rigidbody.velocity
+            ? _pred.Rigidbody.linearVelocity
             : Vector3.zero;
 
     public PredictionRigidbody Body => _pred;

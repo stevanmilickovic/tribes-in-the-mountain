@@ -140,7 +140,7 @@ public class FreeCam : MonoBehaviour
             if (Input.GetKeyDown(KeyCode.Mouse0))
             {
                 ball = Instantiate(ball, transform.position, Quaternion.identity);
-                ball.GetComponent<Rigidbody>().velocity = transform.forward * 50;
+                ball.GetComponent<Rigidbody>().linearVelocity = transform.forward * 50;
             }
             if (Input.GetKeyDown(KeyCode.Mouse2))
             {
@@ -178,7 +178,7 @@ public class FreeCam : MonoBehaviour
             if (i > 1) {i = 0;}
             yield return new WaitForSecondsRealtime(0.02f);
             ball = Instantiate(ball, transform.position, Quaternion.identity);
-            ball.GetComponent<Rigidbody>().velocity = transform.forward * 50;
+            ball.GetComponent<Rigidbody>().linearVelocity = transform.forward * 50;
         }
     }
 

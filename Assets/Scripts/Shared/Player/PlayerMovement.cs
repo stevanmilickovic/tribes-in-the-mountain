@@ -103,9 +103,9 @@ public class PlayerMovement
         if (!grounded) return;
         if (currentTick < nextAllowedJumpTick) return;
 
-        Vector3 vel = body.Rigidbody.velocity;
+        Vector3 vel = body.Rigidbody.linearVelocity;
         vel.y = 0f;
-        body.Rigidbody.velocity = vel;
+        body.Rigidbody.linearVelocity = vel;
         body.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
 
         nextAllowedJumpTick = currentTick + jumpCooldownTicks;
@@ -114,20 +114,20 @@ public class PlayerMovement
     public void ApplyDrag(PredictionRigidbody body, bool grounded, float tickDelta)
     {
         if (!grounded) return;
-        Vector3 v = body.Rigidbody.velocity;
+        Vector3 v = body.Rigidbody.linearVelocity;
         v.x *= 1f / (1f + groundDrag * tickDelta);
         v.z *= 1f / (1f + groundDrag * tickDelta);
-        body.Rigidbody.velocity = v;
+        body.Rigidbody.linearVelocity = v;
     }
 
     public void ClampSpeed(PredictionRigidbody body)
     {
-        Vector3 v = body.Rigidbody.velocity;
+        Vector3 v = body.Rigidbody.linearVelocity;
         Vector3 flat = new Vector3(v.x, 0f, v.z);
         if (flat.magnitude > moveSpeed)
         {
             Vector3 limited = flat.normalized * moveSpeed;
-            body.Rigidbody.velocity = new Vector3(limited.x, v.y, limited.z);
+            body.Rigidbody.linearVelocity = new Vector3(limited.x, v.y, limited.z);
         }
     }
 }
